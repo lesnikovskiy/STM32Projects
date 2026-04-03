@@ -1,0 +1,63 @@
+Debug/
+Release/
+bin/
+obj/
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+*.o
+*.d
+*.su
+*.crf
+*.dep
+*.axf
+*.htm
+*.lnp
+*.sct
+
+# --- STM32CubeIDE / Eclipse ---
+.settings/
+.metadata/
+.analytics
+.log
+*.launch
+
+# --- Keil uVision ---
+*.uvguix.*
+*.uvgui.*
+*.bak
+*.dep
+*.lst
+*.m51
+*.pbi
+*.txt
+Mappings/
+Listings/
+Objects/
+
+# --- IAR Embedded Workbench ---
+*.ewp
+*.eww
+*.dep
+*.ewd
+*.jlink
+*.log
+Debug/
+Release/
+settings/
+
+# --- VS Code / CMake ---
+.vscode/
+build/
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# --- Logs ---
+*.log
+.DS_Store
+Thumbs.db
