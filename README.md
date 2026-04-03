@@ -1,5 +1,10 @@
 # STM32 Projects
 
-### Boards
-1. STM32F401RCT6 (Black Pill)
-2. ![Nucleo Board image](nucleo.webp) Nucleo-L476RG
+## Boards
+
+## STM32F401RCT6 (Black Pill)
+
+![STM32 Pinout Diagram iamge](Pinout-Diagram.png.webp)
+
+## Nucleo-L476RG
+![Nucleo Board image](nucleo.webp)
