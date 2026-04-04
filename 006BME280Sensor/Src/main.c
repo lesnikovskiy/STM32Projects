@@ -65,7 +65,7 @@ void I2C1_Init(void) {
 	RCC_AHB1ENR |= (1 << 1); // GPIOB EN
 	RCC_APB1ENR |= (1 << 21); // I2C1 EN
 
-	// Сначала подтяжка! Чтобы линии сразу ушли в "1"
+	// Enable pull-up resistors first to ensure lines default to "High" (1)
 	GPIOB_PUPDR &= ~((3 << 12) | (3 << 14));
 	GPIOB_PUPDR |= ((1 << 12) | (1 << 14));
 
@@ -78,8 +78,8 @@ void I2C1_Init(void) {
 	I2C1_CR1 &= ~(1 << 0); // Turn OFF I2C
 	I2C1_CR2 = 16; // Frequencey 16MHz
 
-	// Настройка для 100 кГц:
-	// CCR = 16 000 000 / (100 000 * 2) = 80
+	// Configuration for 100 kHz (Standard Mode):
+	// CCR = PCLK1 / (StandardMode_Speed * 2) = 16,000,000 / (100,000 * 2) = 80
 	I2C1_CCR = 80;
 	// TRISE = (Max Rise Time / Period APB1) + 1 = (1000ns / 62.5ns) + 1 = 17
 	I2C1_TRISE = 17;
@@ -146,8 +146,8 @@ void BMP280_ReadCalibration(void) {
 
 	for (int i = 0; i < 24; i++) {
 		if (i == 23) {
-			I2C1_CR1 &= ~(1 << 10); // NACK для последнего байта
-			I2C1_CR1 |= (1 << 9);   // Сразу ставим STOP
+			I2C1_CR1 &= ~(1 << 10); // Send NACK for the last byte
+			I2C1_CR1 |= (1 << 9);   // Generate STOP condition immediately
 		}
 
 		// Wait for byte to appear in DR
@@ -157,7 +157,7 @@ void BMP280_ReadCalibration(void) {
 		data[i] = I2C1_DR;
 	}
 
-	// Temperature: Склеиваем (Little Endian - младший байт идет первым)
+	// Temperature: Merging bytes (Little Endian - Least Significant Byte comes first)
 	dig_T1 = (uint16_t) ((data[1] << 8) | data[0]);
 	dig_T2 = (int16_t) ((data[3] << 8) | data[2]);
 	dig_T3 = (int16_t) ((data[5] << 8) | data[4]);
@@ -205,7 +205,7 @@ uint32_t BMP280_Compensate_P(int32_t adc_P) {
 	var2 = (((int64_t) dig_P8) * p) >> 19;
 	p = ((p + var1 + var2) >> 8) + (((int64_t) dig_P7) << 4);
 
-	return (uint32_t) p; // Давление в Q24.8 формате (нужно разделить на 256 для Паскалей)
+	return (uint32_t) p; // Pressure in Q24.8 format (divide by 256 for Pascals)
 }
 
 uint8_t BMP280_ReadID(void) {
@@ -309,15 +309,14 @@ int main(void) {
 		uint32_t pressure = BMP280_Compensate_P(rawP);
 		uint32_t pa = pressure / 256; // Pressure in Pascal
 
-		// Перевод в мм рт. ст. без использования float:
-		// 1 Па = 0.00750062 мм рт. ст. -> это примерно 75 / 10000
-		// Умножаем на 75 и делим на 10000 для получения целой части
+		// Convert Pascals to mmHg without using float:
+		// 1 Pa = 0.00750062 mmHg -> approximately 75 / 10000
+		// Multiply by 75 and divide by 10000 to get the integer part
 		uint32_t mmhg_int = (pa * 75) / 10000;
 		uint32_t mmhg_frac = ((pa * 75) % 10000) / 100;
 
-		// finalTemp у нас в сотых долях (2438 = 24.38)
-		// Выводим целую часть и остаток
-		// printf("Temperature: %.2f C\r\n", (float) finalTemp / 100.0f);
+		// temp is in hundredths of a degree (e.g., 2438 = 24.38 C)
+		// Output the integer and fractional parts
 		printf("T: %ld.%02ld C | P: %lu Pa | %lu.%02lu mmHg\r\n",
 				(int32_t) (temp / 100), (int32_t) (temp % 100), (uint32_t) pa,
 				(uint32_t) mmhg_int, (uint32_t) mmhg_frac);
