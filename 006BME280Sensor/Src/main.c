@@ -96,7 +96,17 @@ void BMP280_WakeUp(void) {
 
 	I2C1_DR = 0xF4;
 	while (!(I2C1_SR1 & (1 << 7))); // 7 bit is NOSTRETCH
-	I2C1_DR = 0x2E; // Wake up!!!
+
+	/*
+	 * 0x2E = 001 011 10
+	 * 0x2F = 001 011 11
+	 * 001 Temperature oversampling x1
+	 * 011 Pressure oversampling x4
+	 * 10 Mode: Forced
+	 * 11 Mode: Normal
+	 * */
+	//I2C1_DR = 0x2E; // Wake up in forced mode!!!
+	I2C1_DR = 0x2F; // Wake up in normal mode!!!
 	while (!(I2C1_SR1 & (1 << 7))); // 7 bit is TxE
 
 	I2C1_CR1 |= (1 << 9); // STOP
@@ -264,8 +274,8 @@ int main(void) {
 
 		// finalTemp у нас в сотых долях (2438 = 24.38)
 		// Выводим целую часть и остаток
-		printf("Temperature: %ld.%02ld C\r\n", finalTemp / 100,
-				finalTemp % 100);
+		// printf("Temperature: %.2f C\r\n", (float) finalTemp / 100.0f);
+		printf("Temperature: %ld.%02ld C\r\n", (int32_t) (finalTemp / 100), (int32_t) (finalTemp % 100));
 
 		Delay(1000000);
 	}
