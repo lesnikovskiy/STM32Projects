@@ -112,12 +112,18 @@ void BMP280_WakeUp(void) {
 	I2C1_CR1 |= (1 << 9); // STOP
 }
 
+// Temperature data
 uint16_t dig_T1;
 int16_t dig_T2;
 int16_t dig_T3;
 
+// Pressure data
+uint16_t dig_P1;
+int16_t dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
+int32_t t_fine; // common variable to calculcate pressure;
+
 void BMP280_ReadCalibration(void) {
-	uint8_t data[6];
+	uint8_t data[24];
 
 	// Read 6 bytes starting from 0x88
 	I2C1_CR1 |= (1 << 8); // START
@@ -138,8 +144,8 @@ void BMP280_ReadCalibration(void) {
 
 	I2C1_CR1 |= (1 << 10); // Turn on ACK
 
-	for (int i = 0; i < 6; i++) {
-		if (i == 5) {
+	for (int i = 0; i < 24; i++) {
+		if (i == 23) {
 			I2C1_CR1 &= ~(1 << 10); // NACK для последнего байта
 			I2C1_CR1 |= (1 << 9);   // Сразу ставим STOP
 		}
@@ -151,10 +157,20 @@ void BMP280_ReadCalibration(void) {
 		data[i] = I2C1_DR;
 	}
 
-	// Склеиваем (Little Endian - младший байт идет первым)
+	// Temperature: Склеиваем (Little Endian - младший байт идет первым)
 	dig_T1 = (uint16_t) ((data[1] << 8) | data[0]);
 	dig_T2 = (int16_t) ((data[3] << 8) | data[2]);
 	dig_T3 = (int16_t) ((data[5] << 8) | data[4]);
+	// Pressure
+	dig_P1 = (uint16_t) ((data[7] << 8) | data[6]);
+	dig_P2 = (int16_t) ((data[9] << 8) | data[8]);
+	dig_P3 = (int16_t) ((data[11] << 8) | data[10]);
+	dig_P4 = (int16_t) ((data[13] << 8) | data[12]);
+	dig_P5 = (int16_t) ((data[15] << 8) | data[14]);
+	dig_P6 = (int16_t) ((data[17] << 8) | data[16]);
+	dig_P7 = (int16_t) ((data[19] << 8) | data[18]);
+	dig_P8 = (int16_t) ((data[21] << 8) | data[20]);
+	dig_P9 = (int16_t) ((data[23] << 8) | data[22]);
 }
 
 int32_t BMP280_Compensate_T(int32_t adc_T) {
@@ -169,6 +185,27 @@ int32_t BMP280_Compensate_T(int32_t adc_T) {
 	T = (t_fine * 5 + 128) >> 8;
 
 	return T;
+}
+
+uint32_t BMP280_Compensate_P(int32_t adc_P) {
+	int64_t var1, var2, p;
+	var1 = ((int64_t) t_fine) - 128000;
+	var2 = var1 * var1 * (int64_t) dig_P6;
+	var2 = var2 + ((var1 * (int64_t) dig_P5) << 17);
+	var2 = var2 + (((int64_t) dig_P4) << 35);
+	var1 = ((var1 * var1 * (int64_t) dig_P3) >> 8)
+			+ ((var1 * (int64_t) dig_P2) << 12);
+	var1 = (((((int64_t) 1) << 47) + var1)) * ((int64_t) dig_P1) >> 33;
+	if (var1 == 0)
+		return 0; // avoid division by zero
+
+	p = 1048576 - adc_P;
+	p = (((p << 31) - var2) * 3125) / var1;
+	var1 = (((int64_t) dig_P9) * (p >> 13) * (p >> 13)) >> 25;
+	var2 = (((int64_t) dig_P8) * p) >> 19;
+	p = ((p + var1 + var2) >> 8) + (((int64_t) dig_P7) << 4);
+
+	return (uint32_t) p; // Давление в Q24.8 формате (нужно разделить на 256 для Паскалей)
 }
 
 uint8_t BMP280_ReadID(void) {
@@ -205,7 +242,9 @@ uint8_t BMP280_ReadID(void) {
 	return I2C1_DR;
 }
 
-uint32_t BMP280_ReadTemp(void) {
+void BMP280_ReadRawData(uint32_t *rawPres, uint32_t *rawTemp) {
+	uint8_t data[6];
+
 	// 1. Start and set address (Write)
 	I2C1_CR1 |= (1 << 8); // 8 bit is for START
 	while (!(I2C1_SR1 & (1 << 0)));
@@ -214,11 +253,12 @@ uint32_t BMP280_ReadTemp(void) {
 	(void) I2C1_SR2;
 
 	// 2. Register of the temperature (0xFA)
-	I2C1_DR = 0xFA;
+	// 2. Use register of the pressure it is the first (0xF7)
+	I2C1_DR = 0xF7;
 	while (!(I2C1_SR1 & (1 << 7)));
 
 	// 3. Restart and set address (Read)
-	I2C1_CR1 |= (1 << 8);
+	I2C1_CR1 |= (1 << 8); // Restart
 	while (!(I2C1_SR1 & (1 << 0)));
 	I2C1_DR = (0x76 << 1) | 1;
 	while (!(I2C1_SR1 & (1 << 1)));
@@ -227,23 +267,18 @@ uint32_t BMP280_ReadTemp(void) {
 	// 4. Read 3 bytes (algorythm for several bytes)
 	I2C1_CR1 |= (1 << 10); // Turn on ACK (confirm received)
 
-	// Read the first byte MSB
-	while (!(I2C1_SR1 & (1 << 6)));
-	uint32_t msb = I2C1_DR;
+	for (int i = 0; i < 6; i++) {
+		if (i == 5) {
+			I2C1_CR1 &= ~(1 << 10); // NACK
+			I2C1_CR1 |= (1 << 9); // STOP
+		}
+		while (!(I2C1_SR1 & (1 << 6)));
+		data[i] = I2C1_DR;
+	}
 
-	// Read the second byte (LSB)
-	while (!(I2C1_SR1 & (1 << 6)));
-	uint32_t lsb = I2C1_DR;
-
-	// Read the third byte (XLSB) + NACK + STOP
-	I2C1_CR1 &= ~(1 << 10); // NACK before the last byte
-	I2C1_CR1 |= (1 << 9); // STOP
-
-	while (!(I2C1_SR1 & (1 << 6))); // RxNE
-	uint32_t xlsb = I2C1_DR;
-
-	// Get the result (20 bit)
-	return (msb << 12) | (lsb << 4) | (xlsb >> 4);
+	// 1 byte MSB, 2 byte LSB, 3 byte XLSB
+	*rawPres = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4);
+	*rawTemp = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4);
 }
 
 void Delay(volatile uint32_t count) {
@@ -265,17 +300,27 @@ int main(void) {
 
 	Delay(100000);
 
-	volatile uint32_t finalTemp = 0;
-
 	/* Loop forever */
 	for (;;) {
-		uint32_t raw = BMP280_ReadTemp();
-		finalTemp = BMP280_Compensate_T(raw);
+		uint32_t rawP, rawT;
+		BMP280_ReadRawData(&rawP, &rawT);
+
+		int32_t temp = BMP280_Compensate_T(rawT);
+		uint32_t pressure = BMP280_Compensate_P(rawP);
+		uint32_t pa = pressure / 256; // Pressure in Pascal
+
+		// Перевод в мм рт. ст. без использования float:
+		// 1 Па = 0.00750062 мм рт. ст. -> это примерно 75 / 10000
+		// Умножаем на 75 и делим на 10000 для получения целой части
+		uint32_t mmhg_int = (pa * 75) / 10000;
+		uint32_t mmhg_frac = ((pa * 75) % 10000) / 100;
 
 		// finalTemp у нас в сотых долях (2438 = 24.38)
 		// Выводим целую часть и остаток
 		// printf("Temperature: %.2f C\r\n", (float) finalTemp / 100.0f);
-		printf("Temperature: %ld.%02ld C\r\n", (int32_t) (finalTemp / 100), (int32_t) (finalTemp % 100));
+		printf("T: %ld.%02ld C | P: %lu Pa | %lu.%02lu mmHg\r\n",
+				(int32_t) (temp / 100), (int32_t) (temp % 100), (uint32_t) pa,
+				(uint32_t) mmhg_int, (uint32_t) mmhg_frac);
 
 		Delay(1000000);
 	}
