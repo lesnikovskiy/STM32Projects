@@ -66,14 +66,16 @@ void I2C1_Init(void) {
 	RCC_APB1ENR |= (1 << 21); // I2C1 EN
 
 	// Enable pull-up resistors first to ensure lines default to "High" (1)
-	GPIOB_PUPDR &= ~((3 << 12) | (3 << 14));
-	GPIOB_PUPDR |= ((1 << 12) | (1 << 14));
+	GPIOB_PUPDR &= ~((3 << 12) | (3 << 14)); // Reset Mode bits
+	GPIOB_PUPDR |= ((1 << 12) | (1 << 14)); // 1 (01) Pull-up; 2 (10) Pull-down (7.4.4 page 186)
 
+	// PB6 - SCL, PB7 - SDA
 	// PB6, PB7 -> Alternate Function AF4, Open-Drain
-	GPIOB_MODER &= ~((3 << 12) | (3 << 14));
-	GPIOB_MODER |= ((2 << 12) | (2 << 14));
-	GPIOB_OTYPER |= ((1 << 6) | (1 << 7));
-	GPIOB_AFRL |= ((4 << 24) | (4 << 28));
+	GPIOB_MODER &= ~((3 << 12) | (3 << 14)); // Reset Mode bits
+	GPIOB_MODER |= ((2 << 12) | (2 << 14)); // Set AF mode (7.4.1 page 185)
+	// !Important to set Open-Drain to avoid short circuit
+	GPIOB_OTYPER |= ((1 << 6) | (1 << 7)); // Configure pins as Open-Drain (7.4.2 page 185)
+	GPIOB_AFRL |= ((4 << 24) | (4 << 28)); // Assign AF4 (I2C1) to PB6 and PB7
 
 	I2C1_CR1 &= ~(1 << 0); // Turn OFF I2C
 	I2C1_CR2 = 16; // Frequencey 16MHz
@@ -84,7 +86,7 @@ void I2C1_Init(void) {
 	// TRISE = (Max Rise Time / Period APB1) + 1 = (1000ns / 62.5ns) + 1 = 17
 	I2C1_TRISE = 17;
 
-	I2C1_CR1 |= (1 << 0);  // Turn ON
+	I2C1_CR1 |= (1 << 0);  // Turn ON I2C
 }
 
 void BMP280_WakeUp(void) {
@@ -214,6 +216,7 @@ uint8_t BMP280_ReadID(void) {
 	while (!(I2C1_SR1 & (1 << 0))); // 0 SB bit
 
 	// 2. Sensor Address (0x76 << 1) + Write (0)
+	// 0x76 (1110110) Slave Address LSB (SDO)
 	I2C1_DR = (0x76 << 1);
 	while (!(I2C1_SR1 & (1 << 1))); // 2 bit ADDRESS
 	(void) I2C1_SR2; // Clear ADDRESS flag
