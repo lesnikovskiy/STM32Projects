@@ -7,7 +7,7 @@
 
 int main(void) {
 	RCC_GPIOA_Enable();
-	RCC_GPIC_Enable();
+	RCC_GPIOC_Enable();
 
 	led_init();
 

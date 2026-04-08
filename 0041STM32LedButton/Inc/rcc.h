@@ -4,6 +4,6 @@
 #include "stm32f401_registers.h"
 
 void RCC_GPIOA_Enable(void);
-void RCC_GPIC_Enable(void);
+void RCC_GPIOC_Enable(void);
 
 #endif /* RCC_H_ */
