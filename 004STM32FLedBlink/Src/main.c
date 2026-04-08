@@ -29,8 +29,7 @@ void SysTick_Handler(void) {
 
 void delay(uint32_t ms) {
 	uint32_t startTick = msTicks;
-	while ((msTicks - startTick) < ms)
-		;
+	while ((msTicks - startTick) < ms);
 }
 
 int main(void) {

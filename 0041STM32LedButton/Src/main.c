@@ -17,14 +17,23 @@ int main(void) {
 
 	printf("The UART has been initialized\n");
 
-	while (1) {
-		if (is_button_pressed()) {
-			led_on();
-			printf("LED ON\n");
-		} else {
-			led_off();
-			printf("LED OFF\n");
+	static int last_button_state = 1;
 
+	while (1) {
+		int current_state = is_button_pressed();
+
+		if (current_state != last_button_state) {
+			if (current_state == 1) {
+				led_on();
+				printf("LED ON\r\n");
+			} else {
+				led_off();
+				printf("LED OFF\r\n");
+			}
+
+			last_button_state = current_state;
 		}
+
+		for (int i = 0; i < 50000; i++);
 	}
 }

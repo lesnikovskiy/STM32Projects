@@ -21,11 +21,11 @@
 #define GPIOC_MODER   *(volatile uint32_t*)(GPIOC_BASE + 0x00)
 #define GPIOC_ODR     *(volatile uint32_t*)(GPIOC_BASE + 0x14)
 
-#define GPIOC_BSRR  *(volatile uint32_t*)(GPIOC_BASE + 0x18)
+#define GPIOC_BSRR    *(volatile uint32_t*)(GPIOC_BASE + 0x18)
 
 // USART2 Registers
 
-#define USART2_BASE   0x40004400
+#define USART2_BASE   0x40004400UL
 #define USART2_SR     *(volatile uint32_t*)(USART2_BASE + 0x00) // Status
 #define USART2_DR     *(volatile uint32_t*)(USART2_BASE + 0x04) // Data
 #define USART2_BRR    *(volatile uint32_t*)(USART2_BASE + 0x08) // Baudrate
