@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdio.h>
 #include "rcc.h"
 #include "led.h"
 #include "button.h"
@@ -15,9 +14,21 @@ int main(void) {
 
 	UART2_Init();
 
-	printf("The UART has been initialized\n");
+	UART2_SendString("The UART has been initialized\n");
 
-	static int last_button_state = 1;
+	int initial_state = is_button_pressed();
+
+	UART2_SendString("The BUTTON initial state is ");
+	UART2_SendInt(initial_state);
+	UART2_SendString("\r\n");
+
+	if (initial_state)
+		led_on();
+	else
+		led_off();
+
+	static int last_button_state;
+	last_button_state = initial_state;
 
 	while (1) {
 		int current_state = is_button_pressed();
@@ -25,10 +36,10 @@ int main(void) {
 		if (current_state != last_button_state) {
 			if (current_state == 1) {
 				led_on();
-				printf("LED ON\r\n");
+				UART2_SendString("LED ON\r\n");
 			} else {
 				led_off();
-				printf("LED OFF\r\n");
+				UART2_SendString("LED OFF\r\n");
 			}
 
 			last_button_state = current_state;

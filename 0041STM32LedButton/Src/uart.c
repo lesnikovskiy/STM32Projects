@@ -31,3 +31,37 @@ void UART2_SendChar(uint8_t ch) {
 	while (!(USART2_SR & (1 << 7)));
 	USART2_DR = ch;
 }
+
+void UART2_SendString(char *str) {
+	while (*str) {
+		UART2_SendChar(*str++);
+	}
+}
+
+void UART2_SendInt(int num) {
+	char str[12]; // Maximum for int32 including \0
+	int i = 0;
+
+	if (num == 0) {
+		UART2_SendChar('0');
+		return;
+	}
+
+	if (num < 0) {
+		UART2_SendChar('-');
+		if (num == -2147483648) {
+			UART2_SendString("2147483648");
+			return;
+		}
+		num = -num;
+	}
+
+	while (num > 0) {
+		str[i++] = (num % 10) + '0';
+		num /= 10;
+	}
+
+	while (i > 0) {
+		UART2_SendChar(str[--i]);
+	}
+}
