@@ -5,7 +5,7 @@
 #include "uart.h"
 
 void System_Init(void) {
-	Enable_Sleep_Debugging();
+	Debug_EnableSleepMode();
 
 	GPIO_Init();
 	UART2_Init();

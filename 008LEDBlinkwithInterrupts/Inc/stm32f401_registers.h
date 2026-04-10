@@ -7,11 +7,18 @@
  * Enable debugging in wfi mode (sleep mode)
  */
 
-#define DBGMCU_CR      (*(volatile uint32_t*)0xE0042004UL)
+/* Debug MCU registers */
+#define DBGMCU_BASE    0xE0042000UL
+#define DBGMCU_CR      (*(volatile uint32_t*)(DBGMCU_BASE + 0x04))
+
+/* DBGMCU_CR bits */
+#define DBGMCU_CR_DBG_SLEEP    (1 << 0)   /* Keep debugger in Sleep mode */
+#define DBGMCU_CR_DBG_STOP     (1 << 1)   /* Keep debugger in Stop mode */
+#define DBGMCU_CR_DBG_STANDBY  (1 << 2)   /* Keep debugger in Standby mode */
 
 /* ============================================
-   BASE ADDRESSES
-   ============================================ */
+ BASE ADDRESSES
+ ============================================ */
 
 #define RCC_BASE        0x40023800UL
 #define GPIOA_BASE      0x40020000UL
@@ -21,8 +28,8 @@
 #define NVIC_BASE       0xE000E100UL
 
 /* ============================================
-   RCC - RESET AND CLOCK CONTROL
-   ============================================ */
+ RCC - RESET AND CLOCK CONTROL
+ ============================================ */
 
 #define RCC_AHB1ENR     (*(volatile uint32_t*)(RCC_BASE + 0x30))
 #define RCC_APB1ENR     (*(volatile uint32_t*)(RCC_BASE + 0x40))
@@ -36,8 +43,8 @@
 #define RCC_APB2ENR_SYSCFGEN  (1 << 14)
 
 /* ============================================
-   GPIO - GENERAL PURPOSE INPUT/OUTPUT
-   ============================================ */
+ GPIO - GENERAL PURPOSE INPUT/OUTPUT
+ ============================================ */
 
 #define GPIOA_MODER     (*(volatile uint32_t*)(GPIOA_BASE + 0x00))
 #define GPIOA_PUPDR     (*(volatile uint32_t*)(GPIOA_BASE + 0x0C))
@@ -81,8 +88,8 @@
 #define USART2_CR1    (*(volatile uint32_t*)(USART2_BASE + 0x0C)) // Control 1
 
 /* ============================================
-   SYSCFG - SYSTEM CONFIGURATION
-   ============================================ */
+ SYSCFG - SYSTEM CONFIGURATION
+ ============================================ */
 
 #define SYSCFG_EXTICR1   (*(volatile uint32_t*)(SYSCFG_BASE + 0x08))
 
@@ -91,8 +98,8 @@
 #define EXTI0_PORT_A       (0x0U << 0)
 
 /* ============================================
-   EXTI - EXTERNAL INTERRUPTS
-   ============================================ */
+ EXTI - EXTERNAL INTERRUPTS
+ ============================================ */
 
 #define EXTI_IMR        (*(volatile uint32_t*)(EXTI_BASE + 0x00))
 #define EXTI_FTSR       (*(volatile uint32_t*)(EXTI_BASE + 0x0C))
@@ -102,8 +109,8 @@
 #define EXTI_LINE0      (1 << 0)
 
 /* ============================================
-   NVIC - NESTED VECTORED INTERRUPT CONTROLLER
-   ============================================ */
+ NVIC - NESTED VECTORED INTERRUPT CONTROLLER
+ ============================================ */
 
 #define NVIC_ISER0      (*(volatile uint32_t*)(NVIC_BASE + 0x00))
 

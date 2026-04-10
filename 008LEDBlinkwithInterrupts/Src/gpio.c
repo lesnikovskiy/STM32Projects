@@ -59,7 +59,7 @@ uint8_t GPIO_Button_IsPressed(void) {
 	return !(GPIOA_IDR & (1 << BUTTON_PIN));
 }
 
-
-void Enable_Sleep_Debugging(void) {
-	DBGMCU_CR |= (1 << 0); // DBG_SLEEP: Keep debugger clock on during sleep
+void Debug_EnableSleepMode(void) {
+	// This is CRITICAL for debugging with WFI!
+	DBGMCU_CR |= DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STOP; // 0 bit DBG_SLEEP, 1 bit DBG_STOP, 2 bit DBG_STANDBY
 }
