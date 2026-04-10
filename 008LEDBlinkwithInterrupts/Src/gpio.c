@@ -58,3 +58,8 @@ uint8_t GPIO_Button_IsPressed(void) {
 	/* Button is pressed when pin reads 0 (pull-up to ground) */
 	return !(GPIOA_IDR & (1 << BUTTON_PIN));
 }
+
+
+void Enable_Sleep_Debugging(void) {
+	DBGMCU_CR |= (1 << 0); // DBG_SLEEP: Keep debugger clock on during sleep
+}

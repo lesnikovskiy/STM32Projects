@@ -1,5 +1,6 @@
 #include "interrupts.h"
 #include "gpio.h"
+#include "uart.h"
 
 /* ============================================
  INTERRUPT INITIALIZATION
@@ -37,6 +38,8 @@ void Interrupts_EnableGlobal(void) {
 
 __attribute__((used, section(".text")))
 void EXTI0_IRQHandler(void) {
+	UART2_SendString("DEBUG Enter : EXTI0_IRQHandler\r\n");
+
 	/* Check that interrupt is definitely from Line 0 */
 	if (EXTI_PR & EXTI_LINE0) {
 		/* Clear interrupt flag (MANDATORY!) */
@@ -48,10 +51,18 @@ void EXTI0_IRQHandler(void) {
 		if (led_state == 0) {
 			GPIO_LED_On();
 			led_state = 1;
+
+			UART2_SendString("GPIO_LED_On\r\n");
 		} else {
 			GPIO_LED_Off();
 			led_state = 0;
+
+			UART2_SendString("GPIO_LED_Off\r\n");
 		}
+
+		UART2_SendString("led_state = ");
+		UART2_SendInt(led_state);
+		UART2_SendString("\r\n");
 
 		/* Debounce delay (in production, use timer instead) */
 		delay(50000);

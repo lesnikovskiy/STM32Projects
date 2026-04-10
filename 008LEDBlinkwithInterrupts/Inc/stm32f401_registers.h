@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+/* ===========================================
+ * Enable debugging in wfi mode (sleep mode)
+ */
+
+#define DBGMCU_CR      (*(volatile uint32_t*)0xE0042004UL)
+
 /* ============================================
    BASE ADDRESSES
    ============================================ */
@@ -19,6 +25,7 @@
    ============================================ */
 
 #define RCC_AHB1ENR     (*(volatile uint32_t*)(RCC_BASE + 0x30))
+#define RCC_APB1ENR     (*(volatile uint32_t*)(RCC_BASE + 0x40))
 #define RCC_APB2ENR     (*(volatile uint32_t*)(RCC_BASE + 0x44))
 
 /* RCC_AHB1ENR bits */
@@ -35,6 +42,7 @@
 #define GPIOA_MODER     (*(volatile uint32_t*)(GPIOA_BASE + 0x00))
 #define GPIOA_PUPDR     (*(volatile uint32_t*)(GPIOA_BASE + 0x0C))
 #define GPIOA_IDR       (*(volatile uint32_t*)(GPIOA_BASE + 0x10))
+#define GPIOA_AFRL      (*(volatile uint32_t*)(GPIOA_BASE + 0x20))
 
 #define GPIOC_MODER     (*(volatile uint32_t*)(GPIOC_BASE + 0x00))
 #define GPIOC_BSRR      (*(volatile uint32_t*)(GPIOC_BASE + 0x18))
@@ -63,6 +71,14 @@
 #define BUTTON_PIN        0
 #define BUTTON_PIN_MASK   (GPIO_MODER_MASK << (BUTTON_PIN * 2))
 #define BUTTON_PULL_MASK  (GPIO_PUPDR_MASK << (BUTTON_PIN * 2))
+
+// USART2 Registers
+
+#define USART2_BASE   0x40004400UL
+#define USART2_SR     (*(volatile uint32_t*)(USART2_BASE + 0x00)) // Status
+#define USART2_DR     (*(volatile uint32_t*)(USART2_BASE + 0x04)) // Data
+#define USART2_BRR    (*(volatile uint32_t*)(USART2_BASE + 0x08)) // Baudrate
+#define USART2_CR1    (*(volatile uint32_t*)(USART2_BASE + 0x0C)) // Control 1
 
 /* ============================================
    SYSCFG - SYSTEM CONFIGURATION
