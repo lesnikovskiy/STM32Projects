@@ -28,6 +28,7 @@ void UART2_Init(void) {
 	// 3. Baud rate configuration
 	// For 16 MHz and 115200: 16000000 / (16 * 115200) = 8.68
 	// Mantissa 8 (0x8), Fraction 0.68 * 16 = 11 (0xB). Result: 0x8B.
+	// USART2_BRR = 0x008B;  // BRR = 139 (8 << 4 | 11)
 	USART2_BRR = 0x008B;
 
 	// 4. Enable UART, transmitter (TE), and receiver (RE)
