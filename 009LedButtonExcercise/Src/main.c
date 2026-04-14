@@ -122,28 +122,39 @@ void led_off(void) {
 }
 
 void startup_led_blink(void) {
+	usart_send_str("=============================\r\n");
+
 	// Now turn on bit with BSRR
 	// the LED is inverted on the board so add +16bits
 	led_on();
+	usart_send_str("LED ON\r\n");
 
 	// Just toggle the LED
 	// wait 1s, turn off, wait .5s turn off, wait .5s turn off
 	delay(1000000);
 
 	led_off();
+	usart_send_str("LED OFF\r\n");
 	delay(500000);
 
 	led_on();
+	usart_send_str("LED ON\r\n");
 	delay(500000);
 
 	led_off();
+	usart_send_str("LED OFF\r\n");
 	delay(500000);
 
 	led_on();
+	usart_send_str("LED ON\r\n");
 	delay(500000);
 
 	led_off();
+	usart_send_str("LED OFF\r\n");
 	delay(500000);
+
+	usart_send_str("=============================\r\n");
+	usart_send_str("Press button on the board to turn the LED ON\r\n");
 }
 
 void usart_send_char(const char ch) {
