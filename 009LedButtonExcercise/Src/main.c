@@ -3,10 +3,15 @@
 
 #include <stdint.h>
 
-uint32_t rcc_base = 0x40023800UL;
-uint32_t gpioc_base = 0x40020800UL;
+const uint32_t RCC_BASE = 0x40023800UL;
+const uint32_t GPIOA_BASE = 0x40020000UL;
+const uint32_t GPIOC_BASE = 0x40020800UL;
 
 volatile uint32_t *ahb1_enr;
+
+volatile uint32_t *gpioa_moder;
+volatile uint32_t *gpioa_pupdr;
+volatile uint32_t *gpioa_idr;
 
 volatile uint32_t *gpioc_moder;
 volatile uint32_t *gpioc_bsrr;
@@ -17,13 +22,28 @@ void led_off(void);
 void startup_led_blink(void);
 
 int main(void) {
-	ahb1_enr = (volatile uint32_t*) (rcc_base + 0x30);
+	ahb1_enr = (volatile uint32_t*) (RCC_BASE + 0x30);
 
-	gpioc_moder = (volatile uint32_t*) (gpioc_base + 0x00);
-	gpioc_bsrr = (volatile uint32_t*) (gpioc_base + 0x18);
+	gpioa_moder = (volatile uint32_t*) (GPIOA_BASE + 0x00);
+	gpioa_pupdr = (volatile uint32_t*) (GPIOA_BASE + 0x0C);
+	gpioa_idr = (volatile uint32_t*) (GPIOA_BASE + 0x10);
+
+	gpioc_moder = (volatile uint32_t*) (GPIOC_BASE + 0x00);
+	gpioc_bsrr = (volatile uint32_t*) (GPIOC_BASE + 0x18);
+
+	// Enable AHB1 for Port A
+	*ahb1_enr |= (1 << 0);
 
 	// Enable AHB1 (Advanced High-performance bus) Port C
 	*ahb1_enr |= (1 << 2);
+
+	// SET PA0 Mode input (default 00) just clear bits to make sure
+	*gpioa_moder &= ~(3 << 0);
+	// Clear first 2 bits
+	*gpioa_pupdr &= ~(3 << 0);
+	// IMPORTANT: If the button shorts to ground, we need a pull-up to 3.3V
+	*gpioa_pupdr |= (1 << 0); // 1(01) pull up, 2(10) pull down
+
 	// Set PC13 Mode Output
 	*gpioc_moder &= ~(3 << 26); // clear bits 26-27
 	*gpioc_moder |= (1 << 26); // set output mode to bit 26 (01)
@@ -31,7 +51,11 @@ int main(void) {
 	startup_led_blink();
 
 	for (;;) {
-		__asm("nop");
+		if (*gpioa_idr & (1 << 0)) {
+			led_off();
+		} else {
+			led_on();
+		}
 	}
 }
 
@@ -40,6 +64,7 @@ void delay(volatile uint32_t count) {
 		__asm("nop");
 	}
 }
+
 void led_on(void) {
 	*gpioc_bsrr = (1 << (13 + 16));
 }
