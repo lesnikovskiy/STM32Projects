@@ -47,6 +47,7 @@ volatile uint32_t *const SYSCFG_EXTICR1 = (volatile uint32_t*) (SYSCFG_BASE + 0x
 // NVIC ISER0 (Interrupt Set-Enable Register) interrupts 0 - 31 bits
 // TIM2 is at 28 position
 volatile uint32_t *const NVIC_ISER0 = (volatile uint32_t*) 0xE000E100UL;
+volatile uint32_t *const NVIC_ISER1 = (volatile uint32_t*) 0xE000E104UL;
 
 void delay(uint32_t ms);
 void led_on(void);
@@ -55,6 +56,7 @@ void usart_send_char(const char ch);
 void usart_send_str(const char *str);
 void TIM2_IRQHandler(void);
 void EXTI0_IRQHandler(void);
+void USART2_IRQHandler(void);
 
 int main(void) {
 	// Enable Debugger in sleep/stop/standby modes not to brick the board
@@ -85,10 +87,16 @@ int main(void) {
 	// Set AF Mode (10) for pin PA2 (TX)
 	*GPIOA_MODER &= ~(3 << 4);
 	*GPIOA_MODER |= (2 << 4);
+	// Set AF Mode (10) for PA3 (RX)
+	*GPIOA_MODER &= ~(3 << 6);
+	*GPIOA_MODER |= (2 << 6);
 
 	// SET AF7 mode for USART2 PA2 pin which belongs to AFRL controlled by pins 8-15
 	*GPIOA_AFRL &= ~(0xF << 8); // Clear bits 8-15
 	*GPIOA_AFRL |= (7 << 8); // Set bits to 0111
+	// Set AF7 mode for PA3
+	*GPIOA_AFRL &= ~(0xF << 12);
+	*GPIOA_AFRL |= (7 << 12);
 
 	// Set PC13 (LED) Mode Output
 	*GPIOC_MODER &= ~(3 << 26); // clear bits 26-27
@@ -105,6 +113,8 @@ int main(void) {
 	*USART_CR1 |= (1 << 3);
 	// Receiver Enable (RE - 2)
 	*USART_CR1 |= (1 << 2);
+	// Enable RxNEIE (Receive not empty interrupt enable)
+	*USART_CR1 |= (1 << 5);
 
 	// Setup TIM2
 	// Prescaler: 16 000 000 / 16 000 = 1000 ticks per second.
@@ -120,6 +130,8 @@ int main(void) {
 
 	// Enable interrupt 28 bit (TIM2) in NVIC controller
 	*NVIC_ISER0 |= (1 << 28);
+	// Enable interrupt 38 bit (38 - 32 = 6) (USART2)
+	*NVIC_ISER1 |= (1 << 6);
 
 	// Enable counter (CEN counter enable)
 	*TIM2_CR1 |= (1 << 0);
@@ -204,6 +216,33 @@ void EXTI0_IRQHandler(void) {
 		} else {
 			*TIM2_ARR = 2000 - 1;
 			usart_send_str("Mode: Slow\r\n");
+		}
+
+		// Update timer event
+		*TIM2_EGR |= (1 << 0);
+	}
+}
+
+void USART2_IRQHandler(void) {
+	// Check bit 5 (RxNE)
+	if (*USART_SR & (1 << 5)) {
+		char received = (char) (*USART_DR & 0xFF);
+
+		if (received == '\r' || received == '\n') {
+			return;
+		}
+
+		if (received == '0') {
+			*TIM2_ARR = 500 - 1;
+			usart_send_str("Mode: Normal\r\n");
+		} else if (received == '1') {
+			*TIM2_ARR = 100 - 1;
+			usart_send_str("Mode: Fast\r\n");
+		} else if (received == '2') {
+			*TIM2_ARR = 2000 - 1;
+			usart_send_str("Mode: Slow\r\n");
+		} else {
+			usart_send_str("Unknown command! Use 0, 1 or 2\r\n");
 		}
 
 		// Update timer event
