@@ -8,6 +8,7 @@ const uint32_t GPIOA_BASE = 0x40020000UL;
 const uint32_t GPIOC_BASE = 0x40020800UL;
 const uint32_t USART2_BASE = 0x40004400UL;
 const uint32_t TIM2_BASE = 0x40000000UL;
+const uint32_t TIM3_BASE = 0x40000400UL;
 const uint32_t SYSCFG_BASE = 0x40013800UL;
 const uint32_t EXTI_BASE = 0x40013C00UL;
 
@@ -38,6 +39,12 @@ volatile uint32_t *const TIM2_SR = (volatile uint32_t*) (TIM2_BASE + 0x10UL);
 volatile uint32_t *const TIM2_EGR = (volatile uint32_t*) (TIM2_BASE + 0x14UL);
 volatile uint32_t *const TIM2_DIER = (volatile uint32_t*) (TIM2_BASE + 0x0CUL);
 
+volatile uint32_t *const TIM3_CR1 = (volatile uint32_t*) (TIM3_BASE + 0x00);
+volatile uint32_t *const TIM3_PSC = (volatile uint32_t*) (TIM3_BASE + 0x28UL);
+volatile uint32_t *const TIM3_ARR = (volatile uint32_t*) (TIM3_BASE + 0x2CUL);
+volatile uint32_t *const TIM3_CNT = (volatile uint32_t*) (TIM3_BASE + 0x24UL);
+volatile uint32_t *const TIM3_EGR = (volatile uint32_t*) (TIM3_BASE + 0x14UL);
+
 volatile uint32_t *const EXTI_IMR = (volatile uint32_t*) (EXTI_BASE + 0x00UL);
 volatile uint32_t *const EXTI_FTSR = (volatile uint32_t*) (EXTI_BASE + 0x0CUL);
 volatile uint32_t *const EXTI_PR = (volatile uint32_t*) (EXTI_BASE + 0x14UL);
@@ -57,6 +64,7 @@ void usart_send_str(const char *str);
 void TIM2_IRQHandler(void);
 void EXTI0_IRQHandler(void);
 void USART2_IRQHandler(void);
+void startup_led_blink(void);
 
 int main(void) {
 	// Enable Debugger in sleep/stop/standby modes not to brick the board
@@ -73,6 +81,9 @@ int main(void) {
 
 	// Enable TIM2 on APB1
 	*APB1_ENR |= (1 << 0);
+
+	// Enable TIM3 on APB1
+	*APB1_ENR |= (1 << 1);
 
 	// Enable SYSCFG
 	*APB2_ENR |= (1 << 14);
@@ -128,6 +139,12 @@ int main(void) {
 	// Clear flag to avoid triggering interrup immediately
 	*TIM2_SR = 0;
 
+	// Setup TIM3
+	*TIM3_PSC = 16000 - 1;
+	*TIM3_ARR = 0xFFFF;
+	*TIM3_EGR |= (1 << 0);
+	*TIM3_CR1 |= (1 << 0);
+
 	// Enable interrupt 28 bit (TIM2) in NVIC controller
 	*NVIC_ISER0 |= (1 << 28);
 	// Enable interrupt 38 bit (38 - 32 = 6) (USART2)
@@ -147,7 +164,7 @@ int main(void) {
 
 	usart_send_str("Welcome to the STM32 World!\r\n");
 
-	// startup_led_blink();
+	startup_led_blink();
 
 	for (;;) {
 		__asm volatile ("wfi");
@@ -155,8 +172,10 @@ int main(void) {
 }
 
 void delay(uint32_t ms) {
-	*TIM2_CNT = 0; // Reset Counter
-	while (*TIM2_CNT < ms); // Wait until the counter reads the ms value
+	while (ms--) {
+		*TIM3_CNT = 0; // Reset Counter
+		while (*TIM3_CNT < ms); // Wait until the counter reads the ms value
+	}
 }
 
 void led_on(void) {
@@ -248,4 +267,40 @@ void USART2_IRQHandler(void) {
 		// Update timer event
 		*TIM2_EGR |= (1 << 0);
 	}
+}
+
+void startup_led_blink(void) {
+	usart_send_str("=============================\r\n");
+
+	// Now turn on bit with BSRR
+	// the LED is inverted on the board so add +16bits
+	led_on();
+	usart_send_str("LED ON\r\n");
+
+	// Just toggle the LED
+	// wait 1s, turn off, wait .5s turn off, wait .5s turn off
+	delay(1000);
+
+	led_off();
+	usart_send_str("LED OFF\r\n");
+	delay(500);
+
+	led_on();
+	usart_send_str("LED ON\r\n");
+	delay(500);
+
+	led_off();
+	usart_send_str("LED OFF\r\n");
+	delay(500);
+
+	led_on();
+	usart_send_str("LED ON\r\n");
+	delay(500);
+
+	led_off();
+	usart_send_str("LED OFF\r\n");
+	delay(500);
+
+	usart_send_str("=============================\r\n");
+	usart_send_str("Select mode 0 (Normal) 1 (FAST) 2 (SLOW) \r\n");
 }
