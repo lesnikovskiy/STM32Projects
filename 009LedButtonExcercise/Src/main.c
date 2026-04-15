@@ -7,6 +7,7 @@ const uint32_t RCC_BASE = 0x40023800UL;
 const uint32_t GPIOA_BASE = 0x40020000UL;
 const uint32_t GPIOC_BASE = 0x40020800UL;
 const uint32_t USART2_BASE = 0x40004400UL;
+const uint32_t TIM2_BASE = 0x40000000UL;
 const uint32_t SYSCFG_BASE = 0x40013800UL;
 
 volatile uint32_t *const AHB1_ENR = (volatile uint32_t*) (RCC_BASE + 0x30UL);
@@ -25,7 +26,14 @@ volatile uint32_t *const USART_DR = (volatile uint32_t*) (USART2_BASE + 0x04UL);
 volatile uint32_t *const USART_BRR = (volatile uint32_t*) (USART2_BASE + 0x08UL);
 volatile uint32_t *const USART_CR1 = (volatile uint32_t*) (USART2_BASE + 0x0CUL);
 
-void delay(volatile uint32_t count);
+volatile uint32_t *const TIM2_CR1 = (volatile uint32_t*) (TIM2_BASE + 0x00UL);
+volatile uint32_t *const TIM2_PSC = (volatile uint32_t*) (TIM2_BASE + 0x28UL);
+volatile uint32_t *const TIM2_ARR = (volatile uint32_t*) (TIM2_BASE + 0x2CUL);
+volatile uint32_t *const TIM2_CNT = (volatile uint32_t*) (TIM2_BASE + 0x24UL);
+volatile uint32_t *const TIM2_SR = (volatile uint32_t*) (TIM2_BASE + 0x10UL);
+volatile uint32_t *const TIM2_EGR = (volatile uint32_t*) (TIM2_BASE + 0x14UL);
+
+void delay(uint32_t ms);
 void led_on(void);
 void led_off(void);
 void startup_led_blink(void);
@@ -41,6 +49,9 @@ int main(void) {
 
 	// Enable APB1 (Advanced Peripheral Bus) USART2
 	*APB1_ENR |= (1 << 17);
+
+	// Enable TIM2 on APB1
+	*APB1_ENR |= (1 << 0);
 
 	// SET PA0 Mode input (default 00) just clear bits to make sure
 	*GPIOA_MODER &= ~(3 << 0);
@@ -73,6 +84,16 @@ int main(void) {
 	// Receiver Enable (RE - 2)
 	*USART_CR1 |= (1 << 2);
 
+	// Setup TIM2
+	// Prescaler: 16 000 000 / 16 000 = 1000 ticks per second.
+	*TIM2_PSC = 16000-1;
+	// Force update PSC
+	*TIM2_EGR |= (1 << 0);
+	// Setting maximum auto reload
+	*TIM2_ARR = 0xFFFFFFFF;
+	// Enable counter (CEN counter enable)
+	*TIM2_CR1 |= (1 << 0);
+
 	usart_send_str("Welcome to the STM32 World!\r\n");
 
 	startup_led_blink();
@@ -82,17 +103,16 @@ int main(void) {
 			led_on();
 			usart_send_str("LED ON!\r\n");
 			while (!(*GPIOA_IDR & (1 << 0)));
-			delay(50000);
+			delay(1000);
 		} else {
 			led_off();
 		}
 	}
 }
 
-void delay(volatile uint32_t count) {
-	for (int i = 0; i < count; i++) {
-		__asm("nop");
-	}
+void delay(uint32_t ms) {
+	*TIM2_CNT = 0; // Reset Counter
+	while (*TIM2_CNT < ms); // Wait until the counter reads the ms value
 }
 
 void led_on(void) {
@@ -113,27 +133,27 @@ void startup_led_blink(void) {
 
 	// Just toggle the LED
 	// wait 1s, turn off, wait .5s turn off, wait .5s turn off
-	delay(1000000);
+	delay(1000);
 
 	led_off();
 	usart_send_str("LED OFF\r\n");
-	delay(500000);
+	delay(500);
 
 	led_on();
 	usart_send_str("LED ON\r\n");
-	delay(500000);
+	delay(500);
 
 	led_off();
 	usart_send_str("LED OFF\r\n");
-	delay(500000);
+	delay(500);
 
 	led_on();
 	usart_send_str("LED ON\r\n");
-	delay(500000);
+	delay(500);
 
 	led_off();
 	usart_send_str("LED OFF\r\n");
-	delay(500000);
+	delay(500);
 
 	usart_send_str("=============================\r\n");
 	usart_send_str("Press button on the board to turn the LED ON\r\n");
