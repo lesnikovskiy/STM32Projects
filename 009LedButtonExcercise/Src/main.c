@@ -174,7 +174,7 @@ int main(void) {
 void delay(uint32_t ms) {
 	while (ms--) {
 		*TIM3_CNT = 0; // Reset Counter
-		while (*TIM3_CNT < ms); // Wait until the counter reads the ms value
+		while (*TIM3_CNT < 1); // Wait exactly 1ms
 	}
 }
 
