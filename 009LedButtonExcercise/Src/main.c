@@ -56,11 +56,15 @@ volatile uint32_t *const SYSCFG_EXTICR1 = (volatile uint32_t*) (SYSCFG_BASE + 0x
 volatile uint32_t *const NVIC_ISER0 = (volatile uint32_t*) 0xE000E100UL;
 volatile uint32_t *const NVIC_ISER1 = (volatile uint32_t*) 0xE000E104UL;
 
+volatile int global_mode = 0;
+volatile uint32_t duty_cycle = 50;
+
 void delay(uint32_t ms);
 void led_on(void);
 void led_off(void);
 void usart_send_char(const char ch);
 void usart_send_str(const char *str);
+void update_mode_settings(void);
 void TIM2_IRQHandler(void);
 void EXTI0_IRQHandler(void);
 void USART2_IRQHandler(void);
@@ -128,14 +132,9 @@ int main(void) {
 	*USART_CR1 |= (1 << 5);
 
 	// Setup TIM2
-	// Prescaler: 16 000 000 / 16 000 = 1000 ticks per second.
-	*TIM2_PSC = 16000 - 1;
-	// Setting auto reload every 500ms
-	*TIM2_ARR = 500 - 1;
+	update_mode_settings();
 	// UIE: Update Interrupt Enable
 	*TIM2_DIER |= (1 << 0);
-	// Force update PSC
-	*TIM2_EGR |= (1 << 0);
 	// Clear flag to avoid triggering interrup immediately
 	*TIM2_SR = 0;
 
@@ -167,7 +166,20 @@ int main(void) {
 	startup_led_blink();
 
 	for (;;) {
-		__asm volatile ("wfi");
+		if (global_mode == 3) {
+			static int8_t fade_dir = 1;
+
+			duty_cycle += fade_dir;
+			if (duty_cycle >= 100)
+				fade_dir = -1;
+
+			if (duty_cycle <= 0)
+				fade_dir = 1;
+
+			delay(20);
+		} else {
+			__asm volatile ("wfi");
+		}
 	}
 }
 
@@ -198,20 +210,55 @@ void usart_send_str(const char *str) {
 	}
 }
 
+void update_mode_settings(void) {
+	if (global_mode == 3) {
+		*TIM2_PSC = 16 - 1;
+		*TIM2_ARR = 100 - 1;
+	} else {
+		// Prescaler: 16 000 000 / 16 000 = 1000 ticks per second.
+		*TIM2_PSC = 16000 - 1;
+		if (global_mode == 0) {
+			// Setting auto reload every 500ms
+			*TIM2_ARR = 500 - 1;
+		} else if (global_mode == 1) {
+			*TIM2_ARR = 100 - 1;
+		} else {
+			*TIM2_ARR = 2000 - 1;
+		}
+	}
+
+	// Force update PSC
+	*TIM2_EGR |= (1 << 0);
+}
+
 void TIM2_IRQHandler(void) {
 	if (*TIM2_SR & (1 << 0)) {
 		*TIM2_SR &= ~(1 << 0);
+
 		// Check if button pin is output
 		if (*GPIOC_MODER & (1 << 26)) {
-			// XOR logic to toggle LED
-			static int state = 0;
-			if (state) {
-				led_off();
-				state = 0;
+			static uint32_t pwm_count = 0;
+
+			if (global_mode == 3) {
+				if (++pwm_count >= 100) {
+					pwm_count = 0;
+				}
+				if (pwm_count < duty_cycle)
+					led_on();
+				else
+					led_off();
 			} else {
-				led_on();
-				state = 1;
+				// XOR logic to toggle LED
+				static int state = 0;
+				if (state) {
+					led_off();
+				} else {
+					led_on();
+				}
+
+				state = !state;
 			}
+
 		}
 	}
 }
@@ -220,25 +267,11 @@ void EXTI0_IRQHandler(void) {
 	if (*EXTI_PR & (1 << 0)) { // Check if interrupt happened on line 0
 		*EXTI_PR |= (1 << 0); // Rest flag 1 for reset
 
-		static int mode = 0;
-		mode++;
+		for (volatile int i = 0; i < 20000; i++);
 
-		if (mode > 2)
-			mode = 0;
-
-		if (mode == 0) {
-			*TIM2_ARR = 500 - 1;
-			usart_send_str("Mode: Normal\r\n");
-		} else if (mode == 1) {
-			*TIM2_ARR = 100 - 1;
-			usart_send_str("Mode: Fast\r\n");
-		} else {
-			*TIM2_ARR = 2000 - 1;
-			usart_send_str("Mode: Slow\r\n");
-		}
-
-		// Update timer event
-		*TIM2_EGR |= (1 << 0);
+		global_mode = (global_mode + 1) % 4;
+		update_mode_settings();
+		usart_send_str("Button Mode Change\r\n");
 	}
 }
 
@@ -252,16 +285,23 @@ void USART2_IRQHandler(void) {
 		}
 
 		if (received == '0') {
-			*TIM2_ARR = 500 - 1;
+			global_mode = 0;
+			update_mode_settings();
 			usart_send_str("Mode: Normal\r\n");
 		} else if (received == '1') {
-			*TIM2_ARR = 100 - 1;
+			global_mode = 1;
+			update_mode_settings();
 			usart_send_str("Mode: Fast\r\n");
 		} else if (received == '2') {
-			*TIM2_ARR = 2000 - 1;
+			global_mode = 2;
+			update_mode_settings();
 			usart_send_str("Mode: Slow\r\n");
+		} else if (received == '3') {
+			global_mode = 3;
+			update_mode_settings();
+			usart_send_str("Mode: Shim\r\n");
 		} else {
-			usart_send_str("Unknown command! Use 0, 1 or 2\r\n");
+			usart_send_str("Unknown command! Use 0, 1, 2 or 3\r\n");
 		}
 
 		// Update timer event
@@ -302,5 +342,5 @@ void startup_led_blink(void) {
 	delay(500);
 
 	usart_send_str("=============================\r\n");
-	usart_send_str("Select mode 0 (Normal) 1 (FAST) 2 (SLOW) \r\n");
+	usart_send_str("Select mode 0 (Normal) 1 (FAST) 2 (SLOW) 3 (SHIM)\r\n");
 }
