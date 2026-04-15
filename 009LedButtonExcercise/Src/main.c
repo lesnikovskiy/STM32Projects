@@ -10,6 +10,8 @@ const uint32_t USART2_BASE = 0x40004400UL;
 const uint32_t TIM2_BASE = 0x40000000UL;
 const uint32_t SYSCFG_BASE = 0x40013800UL;
 
+volatile uint32_t *const DBGMCU_CR = (volatile uint32_t*) 0xE0042004UL;
+
 volatile uint32_t *const AHB1_ENR = (volatile uint32_t*) (RCC_BASE + 0x30UL);
 volatile uint32_t *const APB1_ENR = (volatile uint32_t*) (RCC_BASE + 0x40UL);
 
@@ -32,6 +34,11 @@ volatile uint32_t *const TIM2_ARR = (volatile uint32_t*) (TIM2_BASE + 0x2CUL);
 volatile uint32_t *const TIM2_CNT = (volatile uint32_t*) (TIM2_BASE + 0x24UL);
 volatile uint32_t *const TIM2_SR = (volatile uint32_t*) (TIM2_BASE + 0x10UL);
 volatile uint32_t *const TIM2_EGR = (volatile uint32_t*) (TIM2_BASE + 0x14UL);
+volatile uint32_t *const TIM2_DIER = (volatile uint32_t*) (TIM2_BASE + 0x0CUL);
+
+// NVIC ISER0 (Interrupt Set-Enable Register) interrupts 0 - 31 bits
+// TIM2 is at 28 position
+volatile uint32_t *const NVIC_ISER0 = (volatile uint32_t*) 0xE000E100UL;
 
 void delay(uint32_t ms);
 void led_on(void);
@@ -39,8 +46,12 @@ void led_off(void);
 void startup_led_blink(void);
 void usart_send_char(const char ch);
 void usart_send_str(const char *str);
+void TIM2_IRQHandler(void);
 
 int main(void) {
+	// Enable Debugger in sleep/stop/standby modes not to brick the board
+	*DBGMCU_CR |= (1 << 0) | (1 << 1) | (1 << 2);
+
 	// Enable AHB1 for Port A
 	*AHB1_ENR |= (1 << 0);
 
@@ -86,27 +97,28 @@ int main(void) {
 
 	// Setup TIM2
 	// Prescaler: 16 000 000 / 16 000 = 1000 ticks per second.
-	*TIM2_PSC = 16000-1;
+	*TIM2_PSC = 16000 - 1;
+	// Setting auto reload every 500ms
+	*TIM2_ARR = 500 - 1;
+	// UIE: Update Interrupt Enable
+	*TIM2_DIER |= (1 << 0);
 	// Force update PSC
 	*TIM2_EGR |= (1 << 0);
-	// Setting maximum auto reload
-	*TIM2_ARR = 0xFFFFFFFF;
+	// Clear flag to avoid triggering interrup immediately
+	*TIM2_SR = 0;
+
+	// Enable interrupt 28 bit (TIM2) in NVIC controller
+	*NVIC_ISER0 |= (1 << 28);
+
 	// Enable counter (CEN counter enable)
 	*TIM2_CR1 |= (1 << 0);
 
 	usart_send_str("Welcome to the STM32 World!\r\n");
 
-	startup_led_blink();
+	// startup_led_blink();
 
 	for (;;) {
-		if (!(*GPIOA_IDR & (1 << 0))) {
-			led_on();
-			usart_send_str("LED ON!\r\n");
-			while (!(*GPIOA_IDR & (1 << 0)));
-			delay(1000);
-		} else {
-			led_off();
-		}
+		__asm volatile ("wfi");
 	}
 }
 
@@ -168,5 +180,23 @@ void usart_send_char(const char ch) {
 void usart_send_str(const char *str) {
 	while (*str) {
 		usart_send_char(*str++);
+	}
+}
+
+void TIM2_IRQHandler(void) {
+	if (*TIM2_SR & (1 << 0)) {
+		*TIM2_SR &= ~(1 << 0);
+		// Check if button pin is output
+		if (*GPIOC_MODER & (1 << 26)) {
+			// XOR logic to toggle LED
+			static int state = 0;
+			if (state) {
+				led_off();
+				state = 0;
+			} else {
+				led_on();
+				state = 1;
+			}
+		}
 	}
 }
