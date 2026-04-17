@@ -7,6 +7,7 @@
 void usart_send_char(const char ch);
 void usart_send_str(const char *str);
 void usart_send_int(int32_t num);
+void usart_send_hex32(uint32_t num);
 void usart_send_int_raw(int32_t num);
 void usart_send_temp(int32_t temp_x100);
 

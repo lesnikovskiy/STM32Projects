@@ -36,6 +36,18 @@ void usart_send_int(int32_t num) {
 	}
 }
 
+void usart_send_hex32(uint32_t num) {
+    char hex_chars[] = "0123456789ABCDEF";
+    usart_send_str("0x");
+    for (int i = 7; i >= 0; i--) {
+        // Get 4 bits = 1 HEX number and send it
+        uint8_t nibble = (num >> (i * 4)) & 0x0F;
+        char c = hex_chars[nibble];
+        char buf[2] = {c, '\0'};
+        usart_send_str(buf);
+    }
+}
+
 void usart_send_int_raw(int32_t num) {
 	char str[11]; // Buffer for 32-bit integer
 	int i = 0;
