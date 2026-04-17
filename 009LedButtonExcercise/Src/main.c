@@ -1,148 +1,17 @@
 /* LED PC13 */
 /* Button PA0 */
 
-#include <stdint.h>
+#include "stm32f401rct6.h"
+#include "app.h"
+#include "delay.h"
+#include "led.h"
+#include "tim2.h"
+#include "usart.h"
+#include "i2c.h"
+#include "bmp280.h"
 
-typedef struct {
-	volatile uint32_t IDCODE;
-	volatile uint32_t CR;
-	volatile uint32_t APB1_FZ;
-	volatile uint32_t APB2_FZ;
-} DBGMCU_TypeDef;
-
-typedef struct {
-	volatile uint32_t CR;
-	volatile uint32_t PLLCFGR;
-	volatile uint32_t CFGR;
-	volatile uint32_t CIR;
-	volatile uint32_t AHB1RSTR;
-	volatile uint32_t AHB2RSTR;
-	volatile uint32_t AHB3RSTR;
-	uint32_t RESERVED1;
-	volatile uint32_t APB1RSTR;
-	volatile uint32_t APB2RSTR;
-	uint32_t RESERVED2[2];
-	volatile uint32_t AHB1ENR;
-	volatile uint32_t AHB2ENR;
-	volatile uint32_t AHB3ENR;
-	uint32_t RESERVED3;
-	volatile uint32_t APB1ENR;
-	volatile uint32_t APB2ENR;
-} RCC_TypeDef;
-
-typedef struct {
-	volatile uint32_t MODER;    // 0x00
-	volatile uint32_t OTYPER;   // 0x04
-	volatile uint32_t OSPEEDR; // 0x08
-	volatile uint32_t PUPDR;    // 0x0C
-	volatile uint32_t IDR;      // 0x10
-	volatile uint32_t ODR;      // 0x14
-	volatile uint32_t BSRR;     // 0x18
-	volatile uint32_t LCKR;     // 0x1C
-	volatile uint32_t AFRL;     // 0x20
-	volatile uint32_t AFRH;     // 0x24
-} GPIO_TypeDef;
-
-typedef struct {
-	volatile uint32_t SR;
-	volatile uint32_t DR;
-	volatile uint32_t BRR;
-	volatile uint32_t CR1;
-	volatile uint32_t CR2;
-	volatile uint32_t CR3;
-	volatile uint32_t GTPR;
-} USART_TypeDef;
-
-typedef struct {
-	volatile uint32_t CR1;
-	volatile uint32_t CR2;
-	volatile uint32_t SMCR;
-	volatile uint32_t DIER;
-	volatile uint32_t SR;
-	volatile uint32_t EGR;
-	volatile uint32_t CCMR1;
-	volatile uint32_t CCMR2;
-	volatile uint32_t CCER;
-	volatile uint32_t CNT;
-	volatile uint32_t PSC;
-	volatile uint32_t ARR;
-	uint32_t RESERVED1;
-	volatile uint32_t CCR1;
-	volatile uint32_t CCR2;
-	volatile uint32_t CCR3;
-	volatile uint32_t CCR4;
-	uint32_t RESERVED2;
-	volatile uint32_t DCR;
-	volatile uint32_t DMAR;
-	volatile uint32_t OR;
-} TIM_TypeDef;
-
-typedef struct {
-	volatile uint32_t IMR;
-	volatile uint32_t EMR;
-	volatile uint32_t RTSR;
-	volatile uint32_t FTSR;
-	volatile uint32_t SWIER;
-	volatile uint32_t PR;
-} EXTI_TypeDef;
-
-typedef struct {
-	volatile uint32_t MEMRMP;
-	volatile uint32_t PMC;
-	volatile uint32_t EXTICR[4];
-	uint32_t RESERVED1[2];
-	volatile uint32_t CMPCR;
-} SYSCFG_TypeDef;
-
-typedef struct {
-	volatile uint32_t ISER[8]; // 0x000 - 0x01C: Interrupt Set-Enable Registers
-	uint32_t RESERVED0[24];
-	volatile uint32_t ICER[8]; // 0x080 - 0x09C: Interrupt Clear-Enable Registers
-	uint32_t RESERVED1[24];
-	volatile uint32_t ISPR[8]; // 0x100 - 0x11C: Interrupt Set-Pending Registers
-	uint32_t RESERVED2[24];
-	volatile uint32_t ICPR[8]; // 0x180 - 0x19C: Interrupt Clear-Pending Registers
-	uint32_t RESERVED3[24];
-	volatile uint32_t IABR[8]; // 0x200 - 0x21C: Interrupt Active Bit Registers
-	uint32_t RESERVED4[56];
-	volatile uint8_t IP[240];  // 0x400: Interrupt Priority Registers
-} NVIC_TypeDef;
-
-const uint32_t DBGMCU_BASE = 0xE0042000UL;
-const uint32_t RCC_BASE = 0x40023800UL;
-const uint32_t GPIOA_BASE = 0x40020000UL;
-const uint32_t GPIOC_BASE = 0x40020800UL;
-const uint32_t USART2_BASE = 0x40004400UL;
-const uint32_t TIM2_BASE = 0x40000000UL;
-const uint32_t TIM3_BASE = 0x40000400UL;
-const uint32_t EXTI_BASE = 0x40013C00UL;
-const uint32_t SYSCFG_BASE = 0x40013800UL;
-const uint32_t NVIC_BASE = 0xE000E100UL;
-
-DBGMCU_TypeDef *const DBGMCU = (DBGMCU_TypeDef*) DBGMCU_BASE;
-RCC_TypeDef *const RCC = (RCC_TypeDef*) RCC_BASE;
-GPIO_TypeDef *const GPIOA = (GPIO_TypeDef*) GPIOA_BASE;
-GPIO_TypeDef *const GPIOC = (GPIO_TypeDef*) GPIOC_BASE;
-USART_TypeDef *const USART = (USART_TypeDef*) USART2_BASE;
-TIM_TypeDef *const TIM2 = (TIM_TypeDef*) TIM2_BASE;
-TIM_TypeDef *const TIM3 = (TIM_TypeDef*) TIM3_BASE;
-EXTI_TypeDef *const EXTI = (EXTI_TypeDef*) EXTI_BASE;
-SYSCFG_TypeDef *const SYSCFG = (SYSCFG_TypeDef*) SYSCFG_BASE;
-NVIC_TypeDef *const NVIC = (NVIC_TypeDef*) NVIC_BASE;
-
-volatile int global_mode = 0;
-volatile uint32_t duty_cycle = 50;
-
-void delay(uint32_t ms);
-void led_on(void);
-void led_off(void);
-void usart_send_char(const char ch);
-void usart_send_str(const char *str);
-void update_mode_settings(void);
 void TIM2_IRQHandler(void);
 void EXTI0_IRQHandler(void);
-void USART2_IRQHandler(void);
-void startup_led_blink(void);
 
 int main(void) {
 	// Enable Debugger in sleep/stop/standby modes not to brick the board
@@ -151,11 +20,17 @@ int main(void) {
 	// Enable AHB1 for Port A
 	RCC->AHB1ENR |= (1 << 0);
 
+	// Enable AHB1 for Port B
+	RCC->AHB1ENR |= (1 << 1);
+
 	// Enable AHB1 (Advanced High-performance bus) Port C
 	RCC->AHB1ENR |= (1 << 2);
 
 	// Enable APB1 (Advanced Peripheral Bus) USART2
 	RCC->APB1ENR |= (1 << 17);
+
+	// Enable I2C1 ON APB1
+	RCC->APB1ENR |= (1 << 21);
 
 	// Enable TIM2 on APB1
 	RCC->APB1ENR |= (1 << 0);
@@ -205,6 +80,21 @@ int main(void) {
 	// Enable RxNEIE (Receive not empty interrupt enable)
 	USART->CR1 |= (1 << 5);
 
+	// Setup I2C1 (Pins B7, B6)
+	// Setup mode AF=10
+	GPIOB->MODER &= ~((3 << 12) | (3 << 14));
+	GPIOB->MODER |= ((2 << 12) | (2 << 14));
+	// Open-Drain = 1 Critical for I2C
+	GPIOB->OTYPER |= (1 << 6) | (1 << 7);
+	// Pull-up (01)
+	GPIOB->PUPDR &= ~((3 << 12) | (3 << 14));
+	GPIOB->PUPDR |= ((1 << 12) | (1 << 14));
+	// AF4 in AFRL (pins 6-7 where pin is 4 bits)
+	GPIOB->AFRL &= ~((0xF << 24) | (0xF << 28));
+	GPIOB->AFRL |= ((4 << 24) | (4 << 28));
+
+	i2c_init();
+
 	// Setup TIM2
 	update_mode_settings();
 	// UIE: Update Interrupt Enable
@@ -237,6 +127,22 @@ int main(void) {
 
 	usart_send_str("Welcome to the STM32 World!\r\n");
 
+	uint8_t id = bmp280_read_id();
+	if (id == 0x58) {
+		usart_send_str("BMP280 Detected!\r\n");
+		usart_send_str("BMP280 id = ");
+		usart_send_int(id);
+		usart_send_str("\r\n");
+
+		bmp280_init_sensor();
+		int32_t rawTemp = bmp280_read_raw_temp();
+		usart_send_str("Raw temp = ");
+		usart_send_int(rawTemp);
+		usart_send_str("\r\n");
+	} else {
+		usart_send_str("BMP280 Connection Error\r\n");
+	}
+
 	startup_led_blink();
 
 	for (;;) {
@@ -255,54 +161,6 @@ int main(void) {
 			__asm volatile ("wfi");
 		}
 	}
-}
-
-void delay(uint32_t ms) {
-	while (ms--) {
-		TIM3->CNT = 0; // Reset Counter
-		while (TIM3->CNT < 1); // Wait exactly 1ms
-	}
-}
-
-void led_on(void) {
-	GPIOC->BSRR = (1 << (13 + 16));
-}
-
-void led_off(void) {
-	GPIOC->BSRR = (1 << 13);
-}
-
-void usart_send_char(const char ch) {
-	// TXE (Transmitter Empty bit 7)
-	while (!(USART->SR & (1 << 7)));
-	USART->DR = ch;
-}
-
-void usart_send_str(const char *str) {
-	while (*str) {
-		usart_send_char(*str++);
-	}
-}
-
-void update_mode_settings(void) {
-	if (global_mode == 3) {
-		TIM2->PSC = 16 - 1;
-		TIM2->ARR = 100 - 1;
-	} else {
-		// Prescaler: 16 000 000 / 16 000 = 1000 ticks per second.
-		TIM2->PSC = 16000 - 1;
-		if (global_mode == 0) {
-			// Setting auto reload every 500ms
-			TIM2->ARR = 500 - 1;
-		} else if (global_mode == 1) {
-			TIM2->ARR = 100 - 1;
-		} else {
-			TIM2->ARR = 2000 - 1;
-		}
-	}
-
-	// Force update PSC
-	TIM2->EGR |= (1 << 0);
 }
 
 void TIM2_IRQHandler(void) {
@@ -348,72 +206,3 @@ void EXTI0_IRQHandler(void) {
 	}
 }
 
-void USART2_IRQHandler(void) {
-	// Check bit 5 (RxNE)
-	if (USART->SR & (1 << 5)) {
-		char received = (char) (USART->DR & 0xFF);
-
-		if (received == '\r' || received == '\n') {
-			return;
-		}
-
-		if (received == '0') {
-			global_mode = 0;
-			update_mode_settings();
-			usart_send_str("Mode: Normal\r\n");
-		} else if (received == '1') {
-			global_mode = 1;
-			update_mode_settings();
-			usart_send_str("Mode: Fast\r\n");
-		} else if (received == '2') {
-			global_mode = 2;
-			update_mode_settings();
-			usart_send_str("Mode: Slow\r\n");
-		} else if (received == '3') {
-			global_mode = 3;
-			update_mode_settings();
-			usart_send_str("Mode: Shim\r\n");
-		} else {
-			usart_send_str("Unknown command! Use 0, 1, 2 or 3\r\n");
-		}
-
-		// Update timer event
-		TIM2->EGR |= (1 << 0);
-	}
-}
-
-void startup_led_blink(void) {
-	usart_send_str("=============================\r\n");
-
-	// Now turn on bit with BSRR
-	// the LED is inverted on the board so add +16bits
-	led_on();
-	usart_send_str("LED ON\r\n");
-
-	// Just toggle the LED
-	// wait 1s, turn off, wait .5s turn off, wait .5s turn off
-	delay(1000);
-
-	led_off();
-	usart_send_str("LED OFF\r\n");
-	delay(500);
-
-	led_on();
-	usart_send_str("LED ON\r\n");
-	delay(500);
-
-	led_off();
-	usart_send_str("LED OFF\r\n");
-	delay(500);
-
-	led_on();
-	usart_send_str("LED ON\r\n");
-	delay(500);
-
-	led_off();
-	usart_send_str("LED OFF\r\n");
-	delay(500);
-
-	usart_send_str("=============================\r\n");
-	usart_send_str("Select mode 0 (Normal) 1 (FAST) 2 (SLOW) 3 (SHIM)\r\n");
-}
