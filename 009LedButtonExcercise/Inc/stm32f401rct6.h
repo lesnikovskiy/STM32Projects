@@ -130,6 +130,7 @@ extern USART_TypeDef *const USART;
 extern I2C_TypeDef *const I2C;
 extern TIM_TypeDef *const TIM2;
 extern TIM_TypeDef *const TIM3;
+extern TIM_TypeDef *const TIM4;
 extern EXTI_TypeDef *const EXTI;
 extern SYSCFG_TypeDef *const SYSCFG;
 extern NVIC_TypeDef *const NVIC;

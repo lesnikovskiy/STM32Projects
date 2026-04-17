@@ -36,6 +36,32 @@ void usart_send_int(int32_t num) {
 	}
 }
 
+void usart_send_int_raw(int32_t num) {
+	char str[11]; // Buffer for 32-bit integer
+	int i = 0;
+
+	if (num == 0) {
+		usart_send_char('0');
+		return;
+	}
+
+	if (num < 0) {
+		usart_send_char('-');
+		num = -num;
+	}
+
+	// Convert number to string (reverse order)
+	while (num > 0) {
+		str[i++] = (num % 10) + '0';
+		num /= 10;
+	}
+
+	// Send string in correct order
+	while (i--) {
+		usart_send_char(str[i]);
+	}
+}
+
 void usart_send_temp(int32_t temp_x100) {
 	// Seperate integer and fractional parts
 	int32_t integrity = temp_x100 / 100;
