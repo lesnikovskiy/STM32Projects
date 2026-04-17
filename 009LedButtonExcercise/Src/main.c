@@ -9,6 +9,7 @@
 #include "usart.h"
 #include "i2c.h"
 #include "bmp280.h"
+#include "remote_codes.h"
 
 void TIM2_IRQHandler(void);
 void EXTI0_IRQHandler(void);
@@ -359,22 +360,22 @@ void EXTI1_IRQHandler(void) {
 				// Example: Control logic based on button code
 				// Replace 0x0C with your actual button codes from UART
 				switch (ir_data) {
-				case 0xE0E08877:
+				case (SAMSUNG_ADDR_TV << 16 | BTN_0):
 					global_mode = 0;
 					update_mode_settings();
 					usart_send_str("Mode Normal set\r\n");
 					break;
-				case 0xE0E020DF:
+				case (SAMSUNG_ADDR_TV << 16 | BTN_1):
 					global_mode = 1;
 					update_mode_settings();
 					usart_send_str("Mode Fast set\r\n");
 					break;
-				case 0xE0E0A05F:
+				case (SAMSUNG_ADDR_TV << 16 | BTN_2):
 					global_mode = 2;
 					update_mode_settings();
 					usart_send_str("Mode Slow set\r\n");
 					break;
-				case 0xE0E0609F:
+				case (SAMSUNG_ADDR_TV << 16 | BTN_3):
 					global_mode = 3;
 					update_mode_settings();
 					usart_send_str("Mode SHIM set\r\n");
