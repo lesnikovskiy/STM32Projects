@@ -13,6 +13,7 @@ const uint32_t TIM4_BASE = 0x40000800UL;
 const uint32_t EXTI_BASE = 0x40013C00UL;
 const uint32_t SYSCFG_BASE = 0x40013800UL;
 const uint32_t NVIC_BASE = 0xE000E100UL;
+const uint32_t IWDG_BASE = 0x40003000UL;
 
 DBGMCU_TypeDef *const DBGMCU = (DBGMCU_TypeDef*) DBGMCU_BASE;
 RCC_TypeDef *const RCC = (RCC_TypeDef*) RCC_BASE;
@@ -27,4 +28,4 @@ TIM_TypeDef *const TIM4 = (TIM_TypeDef*) TIM4_BASE;
 EXTI_TypeDef *const EXTI = (EXTI_TypeDef*) EXTI_BASE;
 SYSCFG_TypeDef *const SYSCFG = (SYSCFG_TypeDef*) SYSCFG_BASE;
 NVIC_TypeDef *const NVIC = (NVIC_TypeDef*) NVIC_BASE;
-
+IWDG_TypeDef *const IWDG = (IWDG_TypeDef*) IWDG_BASE;

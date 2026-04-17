@@ -28,12 +28,22 @@ typedef struct {
 	uint32_t RESERVED3;
 	volatile uint32_t APB1ENR;
 	volatile uint32_t APB2ENR;
+	uint32_t RESERVED4[2];
+	volatile uint32_t AHB1LPENR;    // 0x50
+	volatile uint32_t AHB2LPENR;    // 0x54
+	volatile uint32_t AHB3LPENR;    // 0x58
+	uint32_t RESERVED5;    			// 0x5C
+	volatile uint32_t APB1LPENR;    // 0x60
+	volatile uint32_t APB2LPENR;    // 0x64
+	uint32_t RESERVED6[2]; 			// 0x68, 0x6C
+	volatile uint32_t BDCR;         // 0x70
+	volatile uint32_t CSR;          // 0x74
 } RCC_TypeDef;
 
 typedef struct {
 	volatile uint32_t MODER;    // 0x00
 	volatile uint32_t OTYPER;   // 0x04
-	volatile uint32_t OSPEEDR; // 0x08
+	volatile uint32_t OSPEEDR;  // 0x08
 	volatile uint32_t PUPDR;    // 0x0C
 	volatile uint32_t IDR;      // 0x10
 	volatile uint32_t ODR;      // 0x14
@@ -121,6 +131,13 @@ typedef struct {
 	volatile uint8_t IP[240];  // 0x400: Interrupt Priority Registers
 } NVIC_TypeDef;
 
+typedef struct {
+	volatile uint32_t KR;  // Key register (0x00)
+	volatile uint32_t PR;  // Prescaler register (0x04)
+	volatile uint32_t RLR; // Reload register (0x08)
+	volatile uint32_t SR;  // Status register (0x0C)
+} IWDG_TypeDef;
+
 extern DBGMCU_TypeDef *const DBGMCU;
 extern RCC_TypeDef *const RCC;
 extern GPIO_TypeDef *const GPIOA;
@@ -134,5 +151,6 @@ extern TIM_TypeDef *const TIM4;
 extern EXTI_TypeDef *const EXTI;
 extern SYSCFG_TypeDef *const SYSCFG;
 extern NVIC_TypeDef *const NVIC;
+extern IWDG_TypeDef *const IWDG;
 
 #endif /* STM32F401RCT6_H_ */

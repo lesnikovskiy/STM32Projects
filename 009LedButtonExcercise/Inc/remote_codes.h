@@ -14,5 +14,6 @@
 #define BTN_VOL_DOWN         0xD02F
 #define BTN_CH_UP            0x06F9
 #define BTN_CH_DOWN          0x8679
+#define BTN_POWER            0x40BF
 
 #endif /* REMOTE_CODES_H_ */
