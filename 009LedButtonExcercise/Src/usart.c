@@ -31,10 +31,34 @@ void usart_send_int(int32_t num) {
 		num /= 10;
 	}
 
-	while (i--)
+	while (i--) {
 		usart_send_char(str[i]);
+	}
+}
 
-	usart_send_str("\r\n");
+void usart_send_temp(int32_t temp_x100) {
+	// Seperate integer and fractional parts
+	int32_t integrity = temp_x100 / 100;
+	int32_t fractional = temp_x100 % 100;
+
+	// Handle negative values
+	if (temp_x100 < 0 && integrity == 0) {
+		usart_send_str("-");
+	}
+
+	usart_send_int(integrity);
+	usart_send_char('.');
+
+	if (fractional < 10 && fractional > -10) {
+		usart_send_char('0');
+	}
+
+	if (fractional < 0)
+		fractional = -fractional;
+
+	usart_send_int(fractional);
+
+	usart_send_str(" C\r\n");
 }
 
 void USART2_IRQHandler(void) {

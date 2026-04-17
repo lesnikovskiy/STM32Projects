@@ -135,9 +135,16 @@ int main(void) {
 		usart_send_str("\r\n");
 
 		bmp280_init_sensor();
+		bmp280_read_calibration();
+
 		int32_t rawTemp = bmp280_read_raw_temp();
 		usart_send_str("Raw temp = ");
 		usart_send_int(rawTemp);
+		usart_send_str("\r\n");
+
+		int32_t realTemp = bmp280_compensate_T(rawTemp);
+		usart_send_str("Compensated temp = ");
+		usart_send_temp(realTemp);
 		usart_send_str("\r\n");
 	} else {
 		usart_send_str("BMP280 Connection Error\r\n");
@@ -145,19 +152,34 @@ int main(void) {
 
 	startup_led_blink();
 
+	uint32_t last_temp_update = 0;
+
 	for (;;) {
 		if (global_mode == 3) {
 			static int8_t fade_dir = 1;
+			static uint32_t last_pwm_update = 0;
 
-			duty_cycle += fade_dir;
-			if (duty_cycle >= 100)
-				fade_dir = -1;
+			if ((TIM3->CNT - last_pwm_update) >= 15) {
+				last_pwm_update = TIM3->CNT;
+				duty_cycle += fade_dir;
+				if (duty_cycle >= 100 || duty_cycle <= 0) {
+					fade_dir = -fade_dir;
+				}
+			}
+		}
 
-			if (duty_cycle <= 0)
-				fade_dir = 1;
+		// TIM3 is setup 1 tick 1 ms so delay 5000 ms
+		if ((TIM3->CNT - last_temp_update) >= 5000) {
+			last_temp_update = TIM3->CNT;
 
-			delay(20);
-		} else {
+			int32_t raw = bmp280_read_raw_temp();
+			int32_t realTemp = bmp280_compensate_T(raw);
+
+			usart_send_str("Temp: ");
+			usart_send_temp(realTemp);
+		}
+
+		if (global_mode != 3) {
 			__asm volatile ("wfi");
 		}
 	}
