@@ -352,43 +352,36 @@ void EXTI1_IRQHandler(void) {
 
 			// 3. The package is built
 			if (bit_count == 32) {
-				usart_send_str("IR CMD: ");
+				usart_send_str("IR Data: ");
 				usart_send_hex32(ir_data);
-				usart_send_str("\r\n");
-
-				// NEC Protocol: [Address][Inv Address][Command][Inv Command]
-				uint8_t cmd = (uint8_t) ((ir_data >> 8) & 0xFF);
-
-				usart_send_str("IR CMD: ");
-				usart_send_hex32(cmd);
 				usart_send_str("\r\n");
 
 				// Example: Control logic based on button code
 				// Replace 0x0C with your actual button codes from UART
-				switch (cmd) {
-				case 136:
+				switch (ir_data) {
+				case 0xE0E08877:
 					global_mode = 0;
 					update_mode_settings();
 					usart_send_str("Mode Normal set\r\n");
 					break;
-				case 32:
+				case 0xE0E020DF:
 					global_mode = 1;
 					update_mode_settings();
 					usart_send_str("Mode Fast set\r\n");
 					break;
-				case 160:
+				case 0xE0E0A05F:
 					global_mode = 2;
 					update_mode_settings();
 					usart_send_str("Mode Slow set\r\n");
 					break;
-				case 96:
+				case 0xE0E0609F:
 					global_mode = 3;
 					update_mode_settings();
 					usart_send_str("Mode SHIM set\r\n");
 					break;
 				default:
 					usart_send_str("Unknown command for code ");
-					usart_send_int_raw(cmd);
+					usart_send_hex32(ir_data);
 					usart_send_str("\r\n");
 				}
 			}
