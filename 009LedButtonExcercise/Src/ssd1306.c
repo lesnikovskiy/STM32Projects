@@ -24,6 +24,17 @@ void oled_send_data(uint8_t data) {
 	i2c_stop();
 }
 
+void oled_send_data_burst(uint8_t *data, uint16_t size) {
+	i2c_start_addr(SSD1306_ADDR, 0);
+	i2c_write(0x40); // Co = 0, D/C = 1 (Data)
+
+	for (uint16_t i = 0; i < size; i++) {
+		i2c_write(data[i]);
+	}
+
+	i2c_stop();
+}
+
 void oled_init(void) {
 	oled_send_cmd(0xAE); // Display OFF
 	oled_send_cmd(0x20); // Set Memory Addressing Mode
@@ -65,14 +76,14 @@ void oled_clear_line(uint8_t page) {
 }
 
 void oled_clear_temp_area(void) {
+	uint8_t buffer[128] = { 0 };
+
 	// We clear only pages 3 and 4 where the large font is located
 	for (uint8_t p = 3; p <= 4; p++) {
-		oled_send_cmd(0xB0 + p);     // Set page
-		oled_send_cmd(0x00);         // Set lower column address
-		oled_send_cmd(0x10);         // Set higher column address
-		for (uint8_t i = 0; i < 128; i++) {
-			oled_send_data(0x00);    // Clear 128 pixels horizontally
-		}
+		oled_send_cmd(0xB0 + p);           // Set page
+		oled_send_cmd(0x00);               // Set lower column address
+		oled_send_cmd(0x10);               // Set higher column address
+		oled_send_data_burst(buffer, 128); // Clear 128 pixels horizontally
 	}
 }
 
@@ -84,6 +95,8 @@ void oled_put_char(uint8_t index) {
 }
 
 void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
+	uint8_t buf[10]; // 5 column font * 2 = 10 bytes
+
 	// 1. Draw the TOP half of the scaled character (7 bits -> 14 pixels, so 7 bits go to 2 pages)
 	oled_send_cmd(0xB0 + page);      // Set top page
 	oled_send_cmd(0x00 | (col & 0x0F));        // Set lower column address
@@ -92,7 +105,7 @@ void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
 	for (uint8_t i = 0; i < 5; i++) {
 		uint8_t byte = font5x7[index][i];
 		uint8_t res_top = 0;
-		// Scale first 4 bits of the original byte to 8 bits
+		// Upscale remaining bits to 8 bits
 		if (byte & (1 << 0))
 			res_top |= (0x03 << 0);
 		if (byte & (1 << 1))
@@ -102,19 +115,20 @@ void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
 		if (byte & (1 << 3))
 			res_top |= (0x03 << 6);
 
-		oled_send_data(res_top); // Send twice to double width
-		oled_send_data(res_top);
+		buf[i * 2] = res_top;
+		buf[i * 2 + 1] = res_top;
 	}
 
-	// 2. Draw the BOTTOM half of the scaled character
-	oled_send_cmd(0xB0 + page + 1);  // Set next page (below)
+	oled_send_data_burst(buf, 10);
+
+	// 2. Draw BOTTOM half (IMPORTANT: Don't forget this part)
+	oled_send_cmd(0xB0 + page + 1);
 	oled_send_cmd(0x00 | (col & 0x0F));
 	oled_send_cmd(0x10 | ((col >> 4) & 0x0F));
 
 	for (uint8_t i = 0; i < 5; i++) {
 		uint8_t byte = font5x7[index][i];
 		uint8_t res_bot = 0;
-		// Scale next 3-4 bits to the second page
 		if (byte & (1 << 4))
 			res_bot |= (0x03 << 0);
 		if (byte & (1 << 5))
@@ -123,10 +137,11 @@ void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
 			res_bot |= (0x03 << 4);
 		if (byte & (1 << 7))
 			res_bot |= (0x03 << 6);
-
-		oled_send_data(res_bot); // Send twice to double width
-		oled_send_data(res_bot);
+		buf[i * 2] = res_bot;
+		buf[i * 2 + 1] = res_bot;
 	}
+
+	oled_send_data_burst(buf, 10);
 }
 
 void display_temp_on_oled(int32_t temp) {

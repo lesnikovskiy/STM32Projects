@@ -8,6 +8,7 @@
 
 void oled_send_cmd(uint8_t cmd);
 void oled_send_data(uint8_t data);
+void oled_send_data_burst(uint8_t *data, uint16_t size);
 
 void oled_init(void);
 void oled_clear(void);

@@ -6,13 +6,14 @@ void i2c_init(void) {
 	// Frequency 16MHz
 	I2C->CR2 = 16;
 
-	// Setup 100kHz (Standard Mode)
-	// CCR = 16 000 000 / (2 * 100 000) = 80
-	I2C->CCR = 80;
-	// For OLED use 400kHz (but 100kHz is ok now)
+	// Setup 400kHz (Fast Mode)
+	// CCR = 16 000 000 / (3 * 400 000) = 13.33 -> round to 13
+	// For Fast Mode we also need to set DUTY and F/S bits
+	I2C->CCR = (1 << 15) | (1 << 14) | 13;
 
-	// Maximum trigger rise (1000ns / 62.5ns + 1)
-	I2C->TRISE = 17;
+	// Maximum rise time in Fast Mode is 300ns.
+	// 300ns / 62.5ns + 1 = 5.8 -> 6
+	I2C->TRISE = 6;
 
 	I2C->CR1 |= (1 << 0); // turn on
 }
