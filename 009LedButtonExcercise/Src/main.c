@@ -11,6 +11,7 @@
 #include "bmp280.h"
 #include "iwdg.h"
 #include "remote_irqhandler.h"
+#include "ssd1306.h"
 
 void TIM2_IRQHandler(void);
 void EXTI0_IRQHandler(void);
@@ -104,6 +105,8 @@ int main(void) {
 
 	i2c_init();
 
+	oled_init();
+
 	// Setup TIM2
 	update_mode_settings();
 	// UIE: Update Interrupt Enable
@@ -167,11 +170,16 @@ int main(void) {
 		bmp280_read_calibration();
 
 		int32_t rawTemp = bmp280_read_raw_temp();
+
 		usart_send_str("Raw temp = ");
 		usart_send_int(rawTemp);
 		usart_send_str("\r\n");
 
 		int32_t realTemp = bmp280_compensate_T(rawTemp);
+
+		// display_temp_on_oled(rawTemp);
+		display_temp_large(realTemp);
+
 		usart_send_str("Compensated temp = ");
 		usart_send_temp(realTemp);
 		usart_send_str("\r\n");
@@ -207,6 +215,9 @@ int main(void) {
 
 			int32_t raw = bmp280_read_raw_temp();
 			int32_t realTemp = bmp280_compensate_T(raw);
+
+			oled_clear_temp_area();
+			display_temp_large(realTemp);
 
 			usart_send_str("Temp: ");
 			usart_send_temp(realTemp);

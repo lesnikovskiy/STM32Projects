@@ -9,6 +9,7 @@ void i2c_init(void) {
 	// Setup 100kHz (Standard Mode)
 	// CCR = 16 000 000 / (2 * 100 000) = 80
 	I2C->CCR = 80;
+	// For OLED use 400kHz (but 100kHz is ok now)
 
 	// Maximum trigger rise (1000ns / 62.5ns + 1)
 	I2C->TRISE = 17;
