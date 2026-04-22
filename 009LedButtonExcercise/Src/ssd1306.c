@@ -163,8 +163,11 @@ void display_temp_on_oled(int32_t temp) {
 }
 
 void display_temp_large(int32_t temp) {
-	uint8_t start_col = 30; // Start printing from the middle-ish of the screen
+	uint8_t start_col = 20; // Move a bit to the left to fit more chars
 	uint8_t current_page = 3; // Center vertically (uses pages 3 and 4)
+
+	// 1. Draw a space BEFORE to clean up any old minus sign
+	oled_put_char_large(14, current_page, start_col - 12);
 
 	if (temp < 0) {
 		oled_put_char_large(11, current_page, start_col); // Minus
@@ -178,4 +181,7 @@ void display_temp_large(int32_t temp) {
 	oled_put_char_large((temp / 10) % 10, current_page, start_col + 36);   // Tenths
 	oled_put_char_large(12, current_page, start_col + 48);                 // Degree sign
 	oled_put_char_large(13, current_page, start_col + 60);                 // Letter C (Celsius)
+
+	// 2. Draw a space AFTER to clean up any trailing pixels
+	oled_put_char_large(14, current_page, start_col + 84);
 }

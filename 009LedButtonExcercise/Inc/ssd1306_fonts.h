@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-extern const uint8_t font5x7[14][5];
+extern const uint8_t font5x7[15][5];
 
 #endif /* SSD1306_FONTS_H_ */

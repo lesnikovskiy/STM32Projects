@@ -216,7 +216,6 @@ int main(void) {
 			int32_t raw = bmp280_read_raw_temp();
 			int32_t realTemp = bmp280_compensate_T(raw);
 
-			oled_clear_temp_area();
 			display_temp_large(realTemp);
 
 			usart_send_str("Temp: ");
