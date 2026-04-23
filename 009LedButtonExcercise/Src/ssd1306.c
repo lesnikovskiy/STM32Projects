@@ -95,15 +95,21 @@ void oled_put_char(uint8_t index) {
 }
 
 void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
-	uint8_t buf[10]; // 5 column font * 2 = 10 bytes
+	uint8_t buf[14]; // 7 column font * 2 = 10 bytes
 
 	// 1. Draw the TOP half of the scaled character (7 bits -> 14 pixels, so 7 bits go to 2 pages)
 	oled_send_cmd(0xB0 + page);      // Set top page
 	oled_send_cmd(0x00 | (col & 0x0F));        // Set lower column address
 	oled_send_cmd(0x10 | ((col >> 4) & 0x0F)); // Set higher column address
 
-	for (uint8_t i = 0; i < 5; i++) {
-		uint8_t byte = font5x7[index][i];
+	for (uint8_t i = 0; i < 7; i++) {
+		uint8_t byte = 0;
+		if (index == 15) {
+			byte = font5x7[index][i];
+		} else if (i < 5) {
+			byte = font5x7[index][i];
+		}
+
 		uint8_t res_top = 0;
 		// Upscale remaining bits to 8 bits
 		if (byte & (1 << 0))
@@ -119,15 +125,21 @@ void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
 		buf[i * 2 + 1] = res_top;
 	}
 
-	oled_send_data_burst(buf, 10);
+	oled_send_data_burst(buf, 14);
 
 	// 2. Draw BOTTOM half (IMPORTANT: Don't forget this part)
 	oled_send_cmd(0xB0 + page + 1);
 	oled_send_cmd(0x00 | (col & 0x0F));
 	oled_send_cmd(0x10 | ((col >> 4) & 0x0F));
 
-	for (uint8_t i = 0; i < 5; i++) {
-		uint8_t byte = font5x7[index][i];
+	for (uint8_t i = 0; i < 7; i++) {
+		uint8_t byte = 0;
+		if (index == 15) {
+			byte = font5x7[index][i];
+		} else if (i < 5) {
+			byte = font5x7[index][i];
+		}
+
 		uint8_t res_bot = 0;
 		if (byte & (1 << 4))
 			res_bot |= (0x03 << 0);
@@ -137,11 +149,12 @@ void oled_put_char_large(uint8_t index, uint8_t page, uint8_t col) {
 			res_bot |= (0x03 << 4);
 		if (byte & (1 << 7))
 			res_bot |= (0x03 << 6);
+
 		buf[i * 2] = res_bot;
 		buf[i * 2 + 1] = res_bot;
 	}
 
-	oled_send_data_burst(buf, 10);
+	oled_send_data_burst(buf, 14);
 }
 
 void display_temp_on_oled(int32_t temp) {
@@ -163,25 +176,30 @@ void display_temp_on_oled(int32_t temp) {
 }
 
 void display_temp_large(int32_t temp) {
-	uint8_t start_col = 20; // Move a bit to the left to fit more chars
+	// Positioning
+	uint8_t thermo_col = 4;   // Thermometer position
+	uint8_t start_col = 18;   // Digits position
 	uint8_t current_page = 3; // Center vertically (uses pages 3 and 4)
 
-	// 1. Draw a space BEFORE to clean up any old minus sign
-	oled_put_char_large(14, current_page, start_col - 12);
+	// 1. Draw thermometer icon
+	oled_put_char_large(15, current_page, thermo_col);
 
+	// 2. Draw Minus sign or clear it if temp > 0
 	if (temp < 0) {
 		oled_put_char_large(11, current_page, start_col); // Minus
 		temp = -temp;
+	} else {
+		oled_put_char_large(14, current_page, start_col);
 	}
 
-	// Scale: each large char is ~12 pixels wide (10 pixels + 2 gap)
-	oled_put_char_large((temp / 1000) % 10, current_page, start_col + 0);  // Tens
-	oled_put_char_large((temp / 100) % 10, current_page, start_col + 12);  // Units
-	oled_put_char_large(10, current_page, start_col + 24);                 // Dot
-	oled_put_char_large((temp / 10) % 10, current_page, start_col + 36);   // Tenths
-	oled_put_char_large(12, current_page, start_col + 48);                 // Degree sign
-	oled_put_char_large(13, current_page, start_col + 60);                 // Letter C (Celsius)
+	// Scale: Digits with STEP 15 (to leave a small gap)
+	oled_put_char_large((temp / 1000) % 10, current_page, start_col + 15);  // Tens
+	oled_put_char_large((temp / 100) % 10, current_page, start_col + 30);  // Units
+	oled_put_char_large(10, current_page, start_col + 45);                 // Dot
+	oled_put_char_large((temp / 10) % 10, current_page, start_col + 55);   // Tenths
+	oled_put_char_large(12, current_page, start_col + 70);                 // Degree sign
+	oled_put_char_large(13, current_page, start_col + 85);                 // Letter C (Celsius)
 
-	// 2. Draw a space AFTER to clean up any trailing pixels
-	oled_put_char_large(14, current_page, start_col + 84);
+	// 3. Draw a space AFTER to clean up any trailing pixels
+//	oled_put_char_large(14, current_page, start_col + 84);
 }
