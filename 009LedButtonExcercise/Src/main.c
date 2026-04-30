@@ -223,8 +223,9 @@ int main(void) {
 
 			display_temp_large(realTemp);
 
-			usart_send_str("Temp: ");
-			usart_send_temp(realTemp);
+			//usart_send_str("Temp: ");
+			//usart_send_temp(realTemp);
+			usart_send_temp_dma(realTemp);
 		}
 
 		if (global_mode != 3) {

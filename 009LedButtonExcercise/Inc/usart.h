@@ -6,6 +6,7 @@
 
 void usart_dma_init(void);
 void usart_send_str_dma(const char *str, uint16_t len);
+void usart_send_temp_dma(int32_t temp_x100);
 
 void usart_send_char(const char ch);
 void usart_send_str(const char *str);

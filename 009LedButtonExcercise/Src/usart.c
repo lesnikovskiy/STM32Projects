@@ -1,6 +1,8 @@
 #include "app.h"
 #include "usart.h"
 
+static char uart_dma_buffer[64];
+
 void usart_dma_init(void) {
 	// Enable DMA1 Clock
 	RCC->AHB1ENR |= (1 << 21);
@@ -36,6 +38,58 @@ void usart_send_str_dma(const char *str, uint16_t len) {
 
 	// Enable Stream
 	DMA1_Stream6->CR |= (1 << 0);
+}
+
+void usart_send_temp_dma(int32_t temp_x100) {
+	while (DMA1_Stream6->CR & (1 << 0));
+
+	int32_t integrity = temp_x100 / 100;
+	int32_t fractional = temp_x100 % 100;
+	if (fractional < 0) {
+		fractional = -fractional;
+	}
+
+	int pos = 0;
+
+	uart_dma_buffer[pos++] = 'T';
+	uart_dma_buffer[pos++] = 'e';
+	uart_dma_buffer[pos++] = 'm';
+	uart_dma_buffer[pos++] = 'p';
+	uart_dma_buffer[pos++] = ':';
+	uart_dma_buffer[pos++] = ' ';
+
+	// Handle minus temperature
+	if (temp_x100 < 0) {
+		uart_dma_buffer[pos++] = '-';
+		if (integrity < 0)
+			integrity = -integrity;
+	}
+
+	if (integrity == 0) {
+		uart_dma_buffer[pos++] = '0';
+	} else {
+		char temp_str[10];
+		int i = 0;
+		while (integrity > 0) {
+			temp_str[i++] = (integrity % 10) + '0';
+			integrity /= 10;
+		}
+		while (i--) {
+			uart_dma_buffer[pos++] = temp_str[i];
+		}
+	}
+
+	uart_dma_buffer[pos++] = '.';
+
+	uart_dma_buffer[pos++] = (fractional / 10) + '0';
+	uart_dma_buffer[pos++] = (fractional % 10) + '0';
+
+	uart_dma_buffer[pos++] = ' ';
+	uart_dma_buffer[pos++] = 'C';
+	uart_dma_buffer[pos++] = '\r';
+	uart_dma_buffer[pos++] = '\n';
+
+	usart_send_str_dma(uart_dma_buffer, pos);
 }
 
 void usart_send_char(const char ch) {
