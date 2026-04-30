@@ -138,6 +138,22 @@ typedef struct {
 	volatile uint32_t SR;  // Status register (0x0C)
 } IWDG_TypeDef;
 
+typedef struct {
+	volatile uint32_t CR;     // Configuration register (Offset 0x00)
+	volatile uint32_t NDTR;   // Number of data register (Offset 0x04)
+	volatile uint32_t PAR;    // Peripheral address register (Offset 0x08)++
+	volatile uint32_t M0AR;   // Memory 0 address register (Offset 0x0C)
+	volatile uint32_t M1AR;   // Memory 1 address register (Offset 0x10)
+	volatile uint32_t FCR;    // FIFO control register (Offset 0x14)
+} DMA_Stream_TypeDef;
+
+typedef struct {
+	volatile uint32_t LISR;   // Low interrupt status register (0x00)
+	volatile uint32_t HISR;   // High interrupt status register (0x04)
+	volatile uint32_t LIFCR;  // Low interrupt flag clear register (0x08)
+	volatile uint32_t HIFCR;  // High interrupt flag clear register (0x0C)
+} DMA_TypeDef;
+
 extern DBGMCU_TypeDef *const DBGMCU;
 extern RCC_TypeDef *const RCC;
 extern GPIO_TypeDef *const GPIOA;
@@ -152,5 +168,8 @@ extern EXTI_TypeDef *const EXTI;
 extern SYSCFG_TypeDef *const SYSCFG;
 extern NVIC_TypeDef *const NVIC;
 extern IWDG_TypeDef *const IWDG;
+extern DMA_TypeDef *const DMA1;
+extern DMA_Stream_TypeDef *const DMA1_Stream6;
+extern DMA_Stream_TypeDef *const DMA1_Stream7;
 
 #endif /* STM32F401RCT6_H_ */

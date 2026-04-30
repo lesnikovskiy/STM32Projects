@@ -1,6 +1,43 @@
 #include "app.h"
 #include "usart.h"
 
+void usart_dma_init(void) {
+	// Enable DMA1 Clock
+	RCC->AHB1ENR |= (1 << 21);
+
+	// Make sure Stream is disabled before config
+	DMA1_Stream6->CR &= ~(1 << 0);
+	while (DMA1_Stream6->CR & (1 << 0)); // Wait until disabled
+
+	// Set Peripheral address (USART2 Data Register)
+	DMA1_Stream6->PAR = (uint32_t) &(USART->DR);
+
+	// Configure DMA Stream 6
+	DMA1_Stream6->CR = (4 << 25);  // CHSEL: Channel 4
+	DMA1_Stream6->CR |= (1 << 10); // MINC: Memory Increment mode (MSIZE/PSIZE default 00 = 8bit)
+	DMA1_Stream6->CR |= (1 << 6);  // DIR[1:0]: Direction: Memory-to-peripheral
+	DMA1_Stream6->CR &= ~(1 << 8);  // CIRC: Circular mode (optional, but keep 0 for strings)
+	DMA1_Stream6->CR |= (1 << 4);  // TCIE: Transfer complete interrupt enable (optional)
+
+	// Enable DMA Request
+	USART->CR3 |= (1 << 7); // DMAT: DMA enable transmitter
+}
+
+void usart_send_str_dma(const char *str, uint16_t len) {
+	// Wait if previous transfer is still busy
+	while (DMA1_Stream6->CR & (1 << 0)); // EN
+
+	// Clear all interrupt flags for Stream 6
+	DMA1->HIFCR |= (0x3D << 16);
+
+	// Set Memory Address and Length
+	DMA1_Stream6->M0AR = (uint32_t) str;
+	DMA1_Stream6->NDTR = len;
+
+	// Enable Stream
+	DMA1_Stream6->CR |= (1 << 0);
+}
+
 void usart_send_char(const char ch) {
 	// TXE (Transmitter Empty bit 7)
 	while (!(USART->SR & (1 << 7)));
@@ -37,15 +74,15 @@ void usart_send_int(int32_t num) {
 }
 
 void usart_send_hex32(uint32_t num) {
-    char hex_chars[] = "0123456789ABCDEF";
-    usart_send_str("0x");
-    for (int i = 7; i >= 0; i--) {
-        // Get 4 bits = 1 HEX number and send it
-        uint8_t nibble = (num >> (i * 4)) & 0x0F;
-        char c = hex_chars[nibble];
-        char buf[2] = {c, '\0'};
-        usart_send_str(buf);
-    }
+	char hex_chars[] = "0123456789ABCDEF";
+	usart_send_str("0x");
+	for (int i = 7; i >= 0; i--) {
+		// Get 4 bits = 1 HEX number and send it
+		uint8_t nibble = (num >> (i * 4)) & 0x0F;
+		char c = hex_chars[nibble];
+		char buf[2] = { c, '\0' };
+		usart_send_str(buf);
+	}
 }
 
 void usart_send_int_raw(int32_t num) {

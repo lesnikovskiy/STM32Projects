@@ -103,6 +103,11 @@ int main(void) {
 	GPIOB->AFRL &= ~((0xF << 24) | (0xF << 28));
 	GPIOB->AFRL |= ((4 << 24) | (4 << 28));
 
+	usart_dma_init();
+
+	static const char hello_msg[] = "Welcome to the STM32 World with DMA!\r\n";
+	usart_send_str_dma(hello_msg, sizeof(hello_msg) - 1);
+
 	i2c_init();
 
 	oled_init();
