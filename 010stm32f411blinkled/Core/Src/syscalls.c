@@ -29,9 +29,12 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#include <string.h>
 #include "stm32f4xx.h"
 
 /* Variables */
+extern UART_HandleTypeDef huart1;
+
 extern int __io_putchar(int ch) __attribute__((weak));
 extern int __io_getchar(void) __attribute__((weak));
 
@@ -75,7 +78,8 @@ __attribute__((weak)) int _write(int file, char *ptr, int len) {
 	int DataIdx;
 
 	for (DataIdx = 0; DataIdx < len; DataIdx++) {
-		ITM_SendChar(*ptr++);
+//		ITM_SendChar(*ptr++);
+		HAL_UART_Transmit(&huart1, (uint8_t*)ptr, len, HAL_MAX_DELAY);
 	}
 	return len;
 }
