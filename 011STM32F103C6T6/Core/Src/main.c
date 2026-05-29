@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +58,8 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 
 uint8_t rx_data[1] = { 0 };
+
+volatile uint32_t prev_time_led = 0;
 volatile uint32_t delay = 500;
 
 /* USER CODE END 0 */
@@ -97,6 +99,20 @@ int main(void) {
 
 	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
 
+	char info[100];
+
+	snprintf(info, sizeof(info), "SYSCLK : %lu\r\n", HAL_RCC_GetSysClockFreq());
+	HAL_UART_Transmit(&huart1, (uint8_t*) info, strlen(info), HAL_MAX_DELAY);
+
+	snprintf(info, sizeof(info), "HCKL : %lu\r\n", HAL_RCC_GetHCLKFreq());
+	HAL_UART_Transmit(&huart1, (uint8_t*) info, strlen(info), HAL_MAX_DELAY);
+
+	snprintf(info, sizeof(info), "PCLK1 : %lu\r\n", HAL_RCC_GetPCLK1Freq());
+	HAL_UART_Transmit(&huart1, (uint8_t*) info, strlen(info), HAL_MAX_DELAY);
+
+	snprintf(info, sizeof(info), "PCLK2 : %lu\r\n", HAL_RCC_GetPCLK2Freq());
+	HAL_UART_Transmit(&huart1, (uint8_t*) info, strlen(info), HAL_MAX_DELAY);
+
 	HAL_UART_Receive_IT(&huart1, rx_data, 1);
 
 	/* USER CODE END 2 */
@@ -107,8 +123,12 @@ int main(void) {
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		HAL_Delay(delay);
+		uint32_t current_time = HAL_GetTick();
+
+		if (current_time - prev_time_led >= delay) {
+			prev_time_led = current_time;
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		}
 	}
 	/* USER CODE END 3 */
 }
@@ -246,6 +266,10 @@ void Error_Handler(void) {
 	/* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
+
+	char *panic_msg = "\r\n!!! CRITICAL ERROR !!!\r\n";
+	HAL_UART_Transmit(&huart1, (uint8_t*) panic_msg, strlen(panic_msg), HAL_MAX_DELAY);
+
 	while (1) {
 	}
 	/* USER CODE END Error_Handler_Debug */
