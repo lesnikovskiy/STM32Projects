@@ -1,6 +1,7 @@
 #include "main.h"
 
 void SystemClock_Config(void);
+void HAL_GPIO_MspInit(void);
 void UART1_Init(void);
 void Error_Handler(void);
 
@@ -12,6 +13,8 @@ int main(void) {
 	HAL_Init();
 
 	SystemClock_Config();
+
+	HAL_GPIO_MspInit();
 
 	UART1_Init();
 	HAL_UART_Transmit(&huart1, (uint8_t*) greeting_message, strlen(greeting_message), HAL_MAX_DELAY);
@@ -29,6 +32,13 @@ int main(void) {
 
 	snprintf(msg, sizeof(msg), "PCLK2 : %luHz\r\n", HAL_RCC_GetPCLK2Freq());
 	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
+
+	while (1) {
+		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		HAL_Delay(500);
+	}
+
+	return 0;
 }
 
 void SystemClock_Config(void) {
@@ -40,9 +50,9 @@ void SystemClock_Config(void) {
 	osc_init.PLL.PLLState = RCC_PLL_ON;
 	osc_init.PLL.PLLSource = RCC_PLLSOURCE_HSE;
 	osc_init.PLL.PLLM = 25;
-	osc_init.PLL.PLLN = 400;
-	osc_init.PLL.PLLP = RCC_PLLP_DIV4;
-	osc_init.PLL.PLLQ = 8;
+	osc_init.PLL.PLLN = 200;
+	osc_init.PLL.PLLP = RCC_PLLP_DIV2;
+	osc_init.PLL.PLLQ = 4;
 	if (HAL_RCC_OscConfig(&osc_init) != HAL_OK) {
 		Error_Handler();
 	}
